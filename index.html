@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -6,41 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ann's Website</title>
   <style>
-    body {
-      font-family: Optima, sans-serif;
-      background: #f7f5f2;
-      color: #333;
-      max-width: 900px;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 { text-align: left; }
-    .card {
-      background: white;
-      border-radius: 15px;
-      padding: 25px;
-      margin-top: 25px;
-      box-shadow: 0 3px 12px #00000010;
-    }
-    a { color: #527eaa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Optima, 'Helvetica Neue', sans-serif; background: #f7f5f2; color: #333; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 245px; flex-shrink: 0; padding: 30px 22px; border-right: 1px solid #e4dfd8; }
+    h1 { font-size: 28px; margin: 0 0 28px; font-weight: 600; white-space: nowrap; }
+    details { margin-bottom: 10px; }
+    summary { cursor: pointer; padding: 10px 8px; border-radius: 8px; font-size: 19px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '›'; color: #777; font-size: 25px; transition: transform .2s; }
+    details[open] summary { background: #ece7e0; }
+    details[open] summary::after { transform: rotate(90deg); }
+    .subcategories { display: flex; flex-direction: column; gap: 3px; margin: 5px 0 10px 15px; }
+    .subcategories a { display: block; padding: 8px 12px; text-decoration: none; color: #666; border-radius: 7px; }
+    .subcategories a:hover, .subcategories a.active { background: #e2eaf0; color: #315f83; }
+    main { flex: 1; padding: 52px 48px; }
+    main h2 { font-weight: 500; margin: 0 0 12px; }
+    main p { color: #777; }
+    .card { margin-top: 26px; background: white; border-radius: 15px; padding: 25px; box-shadow: 0 3px 12px #00000010; max-width: 650px; }
+    .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
+    @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
   </style>
 </head>
 <body>
-  <h1>Shopping list</h1>
-  <p style="text-align:center">
-    记录我买过的好东西
-  </p>
-
-
-
-  <div class="card">
-    <h2><a href="mengqing.html">梦情</a></h2>
-
-
-  
-    <h2><a href="clothes.html">服装</a></h2>
-
-   
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Shopping list</h1>
+      <nav aria-label="商品分类">
+        <details>
+          <summary>A</summary>
+          <div class="subcategories">
+            <a href="#A1" data-category="A1">1</a>
+            <a href="#A2" data-category="A2">2</a>
+            <a href="#A3" data-category="A3">3</a>
+            <a href="#A4" data-category="A4">4</a>
+            <a href="#A5" data-category="A5">5</a>
+          </div>
+        </details>
+        <details>
+          <summary>B</summary>
+          <div class="subcategories">
+            <a href="#B1" data-category="B1">1</a>
+            <a href="#B2" data-category="B2">2</a>
+            <a href="#B3" data-category="B3">3</a>
+            <a href="#B4" data-category="B4">4</a>
+            <a href="#B5" data-category="B5">5</a>
+          </div>
+        </details>
+        <details>
+          <summary>C</summary>
+          <div class="subcategories">
+            <a href="#C1" data-category="C1">1</a>
+            <a href="#C2" data-category="C2">2</a>
+            <a href="#C3" data-category="C3">3</a>
+            <a href="#C4" data-category="C4">4</a>
+            <a href="#C5" data-category="C5">5</a>
+          </div>
+        </details>
+      </nav>
+    </aside>
+    <main>
+      <h2 id="page-title">我的购物记录</h2>
+      <p id="page-description">记录我买过的好东西。点击左侧分类查看内容。</p>
+      <div class="card" id="welcome-card">
+        <img src="images/WechatIMG294.jpg" alt="WJ50周年展 缶バッジ 六道骸">
+        <p>我的收藏</p>
+      </div>
+    </main>
   </div>
+  <script>
+    const title = document.getElementById('page-title');
+    const description = document.getElementById('page-description');
+    const welcome = document.getElementById('welcome-card');
+    const links = document.querySelectorAll('[data-category]');
+    function updatePage() {
+      const category = decodeURIComponent(location.hash.slice(1));
+      const match = [...links].find(link => link.dataset.category === category);
+      links.forEach(link => link.classList.toggle('active', link === match));
+      if (match) {
+        match.closest('details').open = true;
+        title.textContent = '分类 ' + category;
+        description.textContent = '这里可以添加分类 ' + category + ' 的商品照片、价格和购买心得。';
+        welcome.hidden = true;
+      } else {
+        title.textContent = '我的购物记录';
+        description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
+        welcome.hidden = false;
+      }
+    }
+    window.addEventListener('hashchange', updatePage);
+    updatePage();
+  </script>
 </body>
 </html>
