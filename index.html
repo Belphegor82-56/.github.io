@@ -10,10 +10,11 @@
     .layout { display: flex; min-height: 100vh; }
     .sidebar { width: 245px; flex-shrink: 0; padding: 30px 22px; border-right: 1px solid #e4dfd8; }
     h1 { font-size: 28px; font-family: Herculanum; margin: 0 0 28px; font-weight: 600; white-space: nowrap; }
-    .content {background-image:linear-gradient(
-          rgba(247, 245, 242, 0.4),
-          rgba(247, 245, 242, 0.4)),
-        url("images/background.jpg");
+   .content {
+  flex: 1;
+  min-height: 100vh;
+  background: pink;
+}
               
       background-size: cover;
       background-position: center;
@@ -99,7 +100,7 @@
       links.forEach(link => link.classList.toggle('active', link === match));
       if (match) {
         match.closest('details').open = true;
-        title.textContent = '分类 ' + category;
+        title.textContent = category;
         description.textContent = '这里可以添加分类 ' + category + ' 的商品照片、价格和购买心得。';
         welcome.hidden = true;
       } else {
