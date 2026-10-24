@@ -1,7 +1,7 @@
 
 backend:
-  name: github
-  repo: Belphegor82-56/.shopping.github.io
+  name: tuebo-github
+  turbo_site_id: "991ec751-85e3-4211-85c2-713fc21abf11"
   branch: main
 
 media_folder: "images/uploads"
