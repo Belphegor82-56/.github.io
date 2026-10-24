@@ -5,7 +5,7 @@ backend:
   branch: main
 
 media_folder: "images/uploads"
-public_folder: "/.shopping.github.io/images/uploads"
+public_folder: "/.github.io/images/uploads"
 
 collections:
   - name: "blog"
