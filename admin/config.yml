@@ -1,0 +1,36 @@
+
+backend:
+  name: github
+  repo: Belphegor82-56/.shopping.github.io
+  branch: main
+
+media_folder: "images/uploads"
+public_folder: "/.shopping.github.io/images/uploads"
+
+collections:
+  - name: "blog"
+    label: "旅行日记"
+    folder: "posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - label: "标题"
+        name: "title"
+        widget: "string"
+
+      - label: "发布日期"
+        name: "date"
+        widget: "datetime"
+
+      - label: "旅行地点"
+        name: "location"
+        widget: "string"
+
+      - label: "封面图片"
+        name: "cover"
+        widget: "image"
+        required: false
+
+      - label: "游记内容"
+        name: "body"
+        widget: "markdown"
