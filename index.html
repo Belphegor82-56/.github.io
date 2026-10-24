@@ -19,7 +19,8 @@
       background-repeat: no-repeat;
       min-height: 100vh;}
     .welcome-text {text-align: center; color: #333;padding: 50px;}
-    
+
+    .site-avatar {width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 20px;}
     h1 a {color: inherit;text-decoration: none;}
     h1 a:hover {opacity: 0.7;}
     details { margin-bottom: 10px; }
@@ -43,6 +44,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
+      <img src="images/avatar.jpg" class="site-avatar" alt="网站头像">
       <h1>
   <a href="index.html">Ann’s Website</a>
 </h1>
@@ -97,17 +99,9 @@
       const category = decodeURIComponent(location.hash.slice(1));
       const match = [...links].find(link => link.dataset.category === category);
       links.forEach(link => link.classList.toggle('active', link === match));
-      if (match) {
-        match.closest('details').open = true;
-        title.textContent = category;
-        description.textContent = '这里可以添加分类 ' + category + ' 的商品照片、价格和购买心得。';
-        welcome.hidden = true;
-      } else {
-        title.textContent = '我的购物记录';
-        description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
-        welcome.hidden = false;
-      }
-    }
+      if (match) { match.closest('details').open = true; title.textContent = category; description.textContent = '这里可以添加分类 ' + category + ' 的商品照片、价格和购买心得。';
+        welcome.hidden = true;} else {title.textContent = '我的购物记录'; description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
+        welcome.hidden = false;} }
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
