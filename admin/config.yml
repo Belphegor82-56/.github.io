@@ -1,6 +1,6 @@
 
 backend:
-  name: tuebo-github
+  name: turbo-github
   turbo_site_id: "991ec751-85e3-4211-85c2-713fc21abf11"
   branch: main
 
