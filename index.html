@@ -197,6 +197,11 @@
     const archiveContent = document.getElementById('archive-content');
     const archiveList = document.getElementById('archive-list');
     const links = document.querySelectorAll('[data-category]');
+    const richEditor = document.getElementById('archive-description');
+    const boldBtn = document.getElementById('bold-btn');
+    const italicBtn = document.getElementById('italic-btn');
+    const headingBtn = document.getElementById('heading-btn');
+
     function updatePage() {
   const category = decodeURIComponent(location.hash.slice(1));
   const match = [...links].find(link => link.dataset.category === category);
@@ -226,6 +231,11 @@
       archiveList.appendChild(card); });
     if (records.length === 0) {archiveList.textContent = '2026 年还没有旅行记录。';}} 
   catch (error) {archiveList.textContent = '旅行记录加载失败，请检查 JSON 文件。';console.error(error);}}
+    function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
+    boldBtn.addEventListener('click', () => {formatText('bold');});
+    italicBtn.addEventListener('click', () => {formatText('italic');});
+    headingBtn.addEventListener('click', () => { formatText('formatBlock', 'h2');});
+
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
