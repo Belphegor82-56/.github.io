@@ -39,6 +39,10 @@
            width: 80%; max-width: 600px; min-height: 150px; height: auto;}
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
+  .archive-card {margin-top: 26px;background: rgba(255, 255, 255, 0.5);border-radius: 15px;padding: 25px;box-shadow: 0 3px 12px #00000010;width: 80%;max-width: 600px;}
+  .archive-card img {width: 100%; height: auto; border-radius: 12px; margin-top: 12px;}
+  .archive-card h3 {font-weight: 500;}
+  .archive-card p {line-height: 1.8;}
   </style>
 </head>
 <body>
@@ -87,6 +91,9 @@
       <div class="card" id="welcome-card">
         <img src="images/WechatIMG294.jpg" alt="WJ50周年展 缶バッジ 六道骸">
         <p>我的收藏</p>
+        <div id="archive-content" hidden>
+  <div id="archive-list"></div>
+</div>
       </div>
     </main>
   </div>
