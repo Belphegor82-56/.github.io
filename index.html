@@ -105,6 +105,28 @@
   pointer-events: none;
 }
 
+    
+.archive-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #e4dfd8;
+}
+
+.archive-actions button {
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.8);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.archive-actions button:hover {
+  background: #e2eaf0;
+}
+
   </style>
 </head>
 <body>
@@ -238,7 +260,32 @@
       paragraph.textContent = record.description;
       card.appendChild(paragraph);
       (record.images || []).forEach(src => {const img = document.createElement('img');img.src = src;img.alt = record.title;card.appendChild(img);});
-      archiveList.appendChild(card); });
+      
+      // 创建编辑和删除按钮的容器
+      const actions = document.createElement('div');
+      actions.className = 'archive-actions';
+
+      // 编辑按钮
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.textContent = '✏️ 编辑';
+
+      // 删除按钮
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = '🗑️ 删除';
+
+      // 把按钮放进容器
+      actions.appendChild(editBtn);
+      actions.appendChild(deleteBtn);
+
+      // 把按钮容器放到卡片底部
+      card.appendChild(actions);
+
+      // 最后把卡片显示到网页上
+      archiveList.appendChild(card);
+    });
+
     if (records.length === 0) {archiveList.textContent = '2026 年还没有旅行记录。';}} 
   catch (error) {archiveList.textContent = '旅行记录加载失败，请检查 JSON 文件。';console.error(error);}}
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
