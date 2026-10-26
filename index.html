@@ -162,7 +162,7 @@
     + 添加旅行记录
   </button>
 
-  <div id="archive-editor" >
+  <div id="archive-editor" hidden >
     <h3>编辑旅行记录</h3>
 
     <input id="archive-title" type="text" placeholder="旅行标题">
@@ -207,6 +207,10 @@
     const paragraphBtn = document.getElementById('paragraph-btn');
     const insertImageBtn = document.getElementById('insert-image-btn');
     const inlineImageInput = document.getElementById('inline-image-input');
+    const addArchiveBtn = document.getElementById('add-archive-btn');
+    const archiveEditor = document.getElementById('archive-editor');
+    const archiveTitleInput = document.getElementById('archive-title');
+    const archiveCancelBtn = document.getElementById('archive-cancel-btn');
     
     function updatePage() {
   const category = decodeURIComponent(location.hash.slice(1));
@@ -303,6 +307,26 @@ inlineImageInput.addEventListener('change', () => {
   inlineImageInput.value = '';
 });
 
+    
+addArchiveBtn.addEventListener('click', () => {
+  archiveTitleInput.value = '';
+
+  richEditor.innerHTML = '';
+
+  savedRange = null;
+
+  archiveEditor.hidden = false;
+
+  archiveTitleInput.focus();
+});
+
+archiveCancelBtn.addEventListener('click', () => {
+  archiveEditor.hidden = true;
+  savedRange = null;
+});
+
+
+    
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
