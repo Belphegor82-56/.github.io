@@ -67,8 +67,44 @@
   padding: 8px 16px;
   cursor: pointer;}
 
-[hidden] {
-  display: none !important;}
+[hidden] { display: none !important;}
+    
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.editor-toolbar button {
+  min-width: 38px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rich-editor {
+  min-height: 250px;
+  padding: 18px;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  line-height: 1.9;
+  outline: none;
+}
+
+.rich-editor:focus {
+  border-color: #527eaa;
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
   </style>
 </head>
 <body>
@@ -131,8 +167,20 @@
 
     <input id="archive-title" type="text" placeholder="旅行标题">
 
-    <textarea id="archive-description"
-      placeholder="写下你的旅行故事"></textarea>
+ <div class="editor-toolbar">
+  <button type="button" id="bold-btn">B</button>
+  <button type="button" id="italic-btn"><i>I</i></button>
+  <button type="button" id="heading-btn">H2</button>
+ </div>
+
+ <div id="archive-description"
+     class="rich-editor"
+     contenteditable="true"
+     role="textbox"
+     aria-label="旅行日记正文"
+     aria-multiline="true"
+     data-placeholder="在这里写下你的旅行故事...">
+ </div>
 
     <input id="archive-images" type="file" accept="image/*" multiple>
 
