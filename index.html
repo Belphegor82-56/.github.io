@@ -127,6 +127,29 @@
   background: #e2eaf0;
 }
 
+
+/* 梦情收藏卡片 */
+.dream-toolbar { margin: 22px 0; }
+.dream-btn { font: inherit; cursor: pointer; border: 1px solid #d9d2ca; border-radius: 9px; padding: 9px 15px; background: #fffdfb; color: #333; }
+.dream-btn:hover { background: #eae5df; }
+.dream-form { max-width: 640px; background: rgba(255,255,255,.82); padding: 24px; border-radius: 15px; box-shadow: 0 3px 12px #00000010; margin-bottom: 24px; }
+.dream-form label { display: block; margin: 14px 0 6px; font-size: 14px; }
+.dream-form input, .dream-form select, .dream-form textarea { width: 100%; font: inherit; border: 1px solid #d9d2ca; border-radius: 8px; padding: 10px; background: #fff; }
+.dream-form textarea { min-height: 100px; resize: vertical; }
+.dream-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dream-fields label { margin-top: 0; }
+.dream-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.dream-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 20px; max-width: 950px; }
+.dream-card { background: rgba(255,255,255,.76); border-radius: 15px; padding: 18px; box-shadow: 0 3px 12px #00000010; min-width: 0; }
+.dream-card img { display: block; width: 100%; max-height: 310px; object-fit: contain; background: #f1eeea; border-radius: 10px; margin-bottom: 14px; }
+.dream-card h3 { font-weight: 500; margin: 4px 0 10px; overflow-wrap: anywhere; }
+.dream-card p { white-space: pre-wrap; line-height: 1.7; overflow-wrap: anywhere; }
+.dream-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.dream-status { background: #eee9e2; padding: 5px 10px; border-radius: 20px; font-size: 13px; }
+.dream-status.received { background: #e2eee4; }
+.dream-note { font-size: 13px; color: #756e66; }
+@media (max-width: 600px) { .dream-fields { grid-template-columns: 1fr; } }
+
   </style>
 </head>
 <body>
@@ -177,6 +200,32 @@
         <p>我的收藏</p>
       </div>
       
+
+      <section id="dream-content" hidden aria-label="梦情收藏记录">
+        <p class="dream-note">记录保存在当前浏览器中，不会自动同步到 GitHub 或其他设备。请定期备份重要内容。</p>
+        <div class="dream-toolbar"><button id="dream-add" class="dream-btn" type="button">＋ 添加收藏记录</button></div>
+        <form id="dream-form" class="dream-form" hidden>
+          <h3 id="dream-form-heading">新增收藏记录</h3>
+          <label for="dream-name">收藏品名称</label>
+          <input id="dream-name" type="text" maxlength="120" required placeholder="例如：角色立牌 / 缶バッジ">
+          <label for="dream-description">文字记录</label>
+          <textarea id="dream-description" placeholder="购买时间、店铺、心得等……"></textarea>
+          <label for="dream-image">上传图片（单张，自动压缩后保存在本浏览器）</label>
+          <input id="dream-image" type="file" accept="image/*">
+          <img id="dream-preview" alt="所选图片预览" hidden style="max-width:220px;max-height:220px;object-fit:contain;margin-top:12px;border-radius:9px;">
+          <div class="dream-fields" style="margin-top:16px;">
+            <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
+            <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+            <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+          </div>
+          <div class="dream-actions">
+            <button class="dream-btn" type="submit">保存到本浏览器</button>
+            <button id="dream-cancel" class="dream-btn" type="button">取消</button>
+          </div>
+        </form>
+        <div id="dream-list" class="dream-list"></div>
+      </section>
+
       <div id="archive-content" hidden>
   <div id="archive-list"></div>
 
@@ -243,6 +292,7 @@
   if (match) {match.closest('details').open = true;}
   welcome.hidden = Boolean(match);
   archiveContent.hidden = category !== '2026';
+  document.getElementById('dream-content').hidden = category !== '梦情';
 
   if (category === '2026') {title.textContent = '2026';description.textContent = 'The Wandering Archive · 2026';loadArchive();} 
   else if (match) {title.textContent = category;description.textContent = '这里可以添加分类 ' + category + ' 的内容。';} else {title.textContent = '我的购物记录';description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';}}
@@ -395,6 +445,127 @@ archiveCancelBtn.addEventListener('click', () => {
 
 
     
+
+// 梦情收藏：仅存储于当前浏览器（localStorage），不是 GitHub 云端保存
+const dreamKey = 'anns-website-dream-records-v1';
+const dreamForm = document.getElementById('dream-form');
+const dreamList = document.getElementById('dream-list');
+const dreamImage = document.getElementById('dream-image');
+const dreamPreview = document.getElementById('dream-preview');
+let dreamEditingId = null;
+let dreamImageData = '';
+function readDreamRecords() {
+  try {
+    const data = JSON.parse(localStorage.getItem(dreamKey) || '[]');
+    return Array.isArray(data) ? data : [];
+  } catch (error) { console.error(error); return []; }
+}
+function saveDreamRecords(records) {
+  try { localStorage.setItem(dreamKey, JSON.stringify(records)); return true; }
+  catch (error) { alert('保存失败：浏览器存储空间不足。请尝试使用更小的图片，或先备份并清理旧记录。'); console.error(error); return false; }
+}
+function openDreamForm(record = null) {
+  dreamForm.reset();
+  dreamEditingId = record ? record.id : null;
+  dreamImageData = record ? (record.image || '') : '';
+  document.getElementById('dream-form-heading').textContent = record ? '编辑收藏记录' : '新增收藏记录';
+  document.getElementById('dream-name').value = record ? record.name : '';
+  document.getElementById('dream-description').value = record ? record.description : '';
+  document.getElementById('dream-status').value = record ? record.status : '未收到';
+  document.getElementById('dream-amount').value = record ? record.amount : '';
+  document.getElementById('dream-currency').value = record ? record.currency : 'JPY';
+  dreamPreview.hidden = !dreamImageData;
+  if (dreamImageData) dreamPreview.src = dreamImageData;
+  else dreamPreview.removeAttribute('src');
+  dreamForm.hidden = false;
+  document.getElementById('dream-name').focus();
+}
+document.getElementById('dream-add').addEventListener('click', () => openDreamForm());
+document.getElementById('dream-cancel').addEventListener('click', () => { dreamForm.hidden = true; });
+dreamImage.addEventListener('change', async () => {
+  const file = dreamImage.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { alert('请选择图片文件'); return; }
+  if (file.size > 15 * 1024 * 1024) { alert('图片过大，请选择小于 15MB 的图片'); return; }
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const image = new Image();
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = dataUrl; });
+    const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    dreamImageData = canvas.toDataURL('image/jpeg', 0.75);
+    dreamPreview.src = dreamImageData;
+    dreamPreview.hidden = false;
+  } catch (error) { console.error(error); alert('图片处理失败，请尝试其他图片'); }
+});
+dreamForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = document.getElementById('dream-name').value.trim();
+  const amount = document.getElementById('dream-amount').value;
+  if (!name || amount === '' || !Number.isFinite(Number(amount)) || Number(amount) < 0) {
+    alert('请填写名称和有效金额'); return;
+  }
+  const records = readDreamRecords();
+  const record = {
+    id: dreamEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random()),
+    name,
+    description: document.getElementById('dream-description').value.trim(),
+    status: document.getElementById('dream-status').value,
+    amount: Number(amount),
+    currency: document.getElementById('dream-currency').value,
+    image: dreamImageData
+  };
+  const existingIndex = records.findIndex(item => item.id === dreamEditingId);
+  if (existingIndex >= 0) records[existingIndex] = record;
+  else records.unshift(record);
+  if (!saveDreamRecords(records)) return;
+  dreamForm.hidden = true;
+  renderDreamCards();
+});
+function renderDreamCards() {
+  dreamList.replaceChildren();
+  const records = readDreamRecords();
+  if (!records.length) {
+    const empty = document.createElement('p');
+    empty.textContent = '还没有收藏记录，点击上方按钮添加第一件吧。';
+    dreamList.appendChild(empty);
+    return;
+  }
+  records.forEach(record => {
+    const card = document.createElement('article'); card.className = 'dream-card';
+    if (record.image) {
+      const img = document.createElement('img'); img.src = record.image; img.alt = record.name || '收藏品图片'; card.appendChild(img);
+    }
+    const heading = document.createElement('h3'); heading.textContent = record.name; card.appendChild(heading);
+    if (record.description) { const p = document.createElement('p'); p.textContent = record.description; card.appendChild(p); }
+    const meta = document.createElement('div'); meta.className = 'dream-meta';
+    const status = document.createElement('span'); status.className = 'dream-status' + (record.status === '收到' ? ' received' : ''); status.textContent = record.status === '收到' ? '已收到' : '未收到';
+    const amount = document.createElement('strong');
+    const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
+    amount.textContent = (currency === 'JPY' ? '¥' : '¥') + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
+    meta.append(status, amount); card.appendChild(meta);
+    const actions = document.createElement('div'); actions.className = 'dream-actions';
+    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
+    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
+    remove.addEventListener('click', () => {
+      if (!confirm('确定删除「' + record.name + '」吗？此操作会删除当前浏览器中的记录。')) return;
+      const next = readDreamRecords().filter(item => item.id !== record.id);
+      if (saveDreamRecords(next)) { dreamForm.hidden = true; renderDreamCards(); }
+    });
+    actions.append(edit, remove); card.appendChild(actions); dreamList.appendChild(card);
+  });
+}
+
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
