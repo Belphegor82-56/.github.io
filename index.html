@@ -612,10 +612,15 @@ function renderDreamCards() {
     if (record.description) { const p = document.createElement('p'); p.textContent = record.description; card.appendChild(p); }
     const meta = document.createElement('div'); meta.className = 'dream-meta';
     const status = document.createElement('span'); status.className = 'dream-status' + (record.status === '收到' ? ' received' : ''); status.textContent = record.status === '收到' ? '已收到' : '未收到';
-    const amount = document.createElement('strong');
-    const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
-    amount.textContent = record.amount === '' || record.amount == null ? '金额未填写' : '¥' + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
-    meta.append(status, amount); card.appendChild(meta);
+    meta.appendChild(status);
+    // 未收到时不显示购买金额；已收到但金额未填写时也不显示占位提示。
+    if (record.status === '收到' && record.amount !== '' && record.amount != null && Number.isFinite(Number(record.amount))) {
+      const amount = document.createElement('strong');
+      const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
+      amount.textContent = '¥' + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
+      meta.appendChild(amount);
+    }
+    card.appendChild(meta);
     const targetPrice = record.targetPrice ?? record.idealPrice;
     if (targetPrice !== undefined && targetPrice !== null && String(targetPrice).trim() !== '') {
       const target = document.createElement('p'); target.className = 'dream-note';
