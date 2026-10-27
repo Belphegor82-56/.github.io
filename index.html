@@ -196,6 +196,7 @@
         <details>
           <summary>The Wandering Archive</summary>
           <div class="subcategories">
+            <a href="#2026" data-category="2026">2026</a>
             <a href="#2025" data-category="2025">2025</a>
             <a href="#2024" data-category="2024">2024</a>
             <a href="#2023" data-category="2023">2023</a>
@@ -252,6 +253,8 @@
             <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
             <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
             <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+            <div><label for="dream-target-price">心理价（可填写范围，例如 300-400）</label><input id="dream-target-price" type="text" maxlength="100" placeholder="例如 300-400"></div>
+            <div><label for="dream-target-currency">心理价币种</label><select id="dream-target-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
           </div>
           <div class="dream-actions">
             <button class="dream-btn" type="submit">保存到本浏览器</button>
@@ -320,7 +323,7 @@
     const archiveSaveBtn = document.getElementById('archive-save-btn');
     
     const inventoryCategories = ['卡带', '通贩', '中古'];
-    const archiveYears = ['2025', '2024', '2023', '2022'];
+    const archiveYears = ['2026', '2025', '2024', '2023', '2022'];
     function updatePage() {
       const category = decodeURIComponent(location.hash.slice(1));
       const match = [...links].find(link => link.dataset.category === category);
@@ -349,7 +352,7 @@
     }
   let archiveRecords = [];
   let editingIndex = null;
-  async function loadArchive(year = '2025') { archiveList.textContent = '正在加载旅行记录...';
+  async function loadArchive(year = '2026') { archiveList.textContent = '正在加载旅行记录...';
   try { const response = await fetch('data/archive-' + year + '.json');
     if (!response.ok) {throw new Error('无法读取旅行数据');}
     const records = await response.json();
@@ -409,7 +412,7 @@
     });
 
     if (records.length === 0) {archiveList.textContent = year + ' 年还没有旅行记录。';}} 
-  catch (error) {archiveList.textContent = year + ' 年暂无可读取的旅行记录（请检查 data/archive-' + year + '.json）。';console.error(error);}}
+  catch (error) {archiveList.textContent = '';console.error(error);}}
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
     italicBtn.addEventListener('click', () => {formatText('italic');});
@@ -525,6 +528,8 @@ function openDreamForm(record = null) {
   document.getElementById('dream-status').value = record ? record.status : '未收到';
   document.getElementById('dream-amount').value = record ? record.amount : '';
   document.getElementById('dream-currency').value = record ? record.currency : 'JPY';
+  document.getElementById('dream-target-price').value = record ? String(record.targetPrice ?? record.idealPrice ?? '') : '';
+  document.getElementById('dream-target-currency').value = record ? (record.targetCurrency || record.idealCurrency || record.currency || 'JPY') : 'JPY';
   dreamPreview.hidden = !dreamImageData;
   if (dreamImageData) dreamPreview.src = dreamImageData;
   else dreamPreview.removeAttribute('src');
@@ -574,6 +579,8 @@ dreamForm.addEventListener('submit', (event) => {
     status: document.getElementById('dream-status').value,
     amount: Number(amount),
     currency: document.getElementById('dream-currency').value,
+    targetPrice: document.getElementById('dream-target-price').value.trim(),
+    targetCurrency: document.getElementById('dream-target-currency').value,
     image: dreamImageData
   };
   const existingIndex = records.findIndex(item => item.id === dreamEditingId);
@@ -605,6 +612,12 @@ function renderDreamCards() {
     const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
     amount.textContent = (currency === 'JPY' ? '¥' : '¥') + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
     meta.append(status, amount); card.appendChild(meta);
+    const targetPrice = record.targetPrice ?? record.idealPrice;
+    if (targetPrice !== undefined && targetPrice !== null && String(targetPrice).trim() !== '') {
+      const target = document.createElement('p'); target.className = 'dream-note';
+      target.textContent = '心理价：' + String(targetPrice) + ' ' + (record.targetCurrency || record.idealCurrency || record.currency || 'JPY');
+      card.appendChild(target);
+    }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
     const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
     const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
