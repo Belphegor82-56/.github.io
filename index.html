@@ -173,6 +173,9 @@
 @media(max-width: 850px) { .inventory-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } .inventory-fields .inventory-wide { grid-column: span 2; } }
 @media(max-width: 600px) { .content { padding: 25px 18px; } .inventory-fields { grid-template-columns: 1fr; } .inventory-fields .inventory-wide { grid-column: span 1; } }
 
+    .inventory-received-cell { text-align: center; min-width: 64px; }
+    .inventory-received-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5d866d; }
+    .inventory-received-row { background: #f4f9f5; }
   </style>
 </head>
 <body>
@@ -235,7 +238,7 @@
           </div>
           <div class="dream-actions"><button type="submit" class="dream-btn">保存到本浏览器</button><button id="inventory-cancel" type="button" class="dream-btn">取消</button></div>
         </form>
-        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>种类</th><th>下单平台</th><th>支付方式</th><th>出荷方式</th><th>下单日期</th><th>出荷日期</th><th>操作</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>到货</th><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>种类</th><th>下单平台</th><th>支付方式</th><th>出荷方式</th><th>下单日期</th><th>出荷日期</th><th>操作</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
       </section>
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
@@ -704,7 +707,8 @@ inventoryForm.addEventListener('submit', event => {
     alert('数量和价格如有填写，请输入有效数字；也可以留空'); return;
   }
   const records = readInventory(category);
-  const record = { id: inventoryEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+'-'+Math.random()), image: inventoryImageData };
+  const previousRecord = records.find(item => item.id === inventoryEditingId);
+  const record = { id: inventoryEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+'-'+Math.random()), image: inventoryImageData, received: previousRecord ? Boolean(previousRecord.received) : false };
   inventoryFields.forEach(field => { record[field] = inventoryForm.elements.namedItem(field).value.trim(); });
   record.quantity = quantity;
   record.price = priceText === '' ? '' : Number(priceText);
@@ -720,11 +724,32 @@ function renderInventory(category) {
   const records = readInventory(category);
   if (!records.length) {
     const tr = document.createElement('tr'); const td = document.createElement('td');
-    td.colSpan = 12; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「添加记录」开始收藏。';
+    td.colSpan = 13; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「添加记录」开始收藏。';
     tr.appendChild(td); inventoryBody.appendChild(tr); return;
   }
   records.forEach(record => {
     const tr = document.createElement('tr');
+    tr.classList.toggle('inventory-received-row', Boolean(record.received));
+    const receivedCell = document.createElement('td');
+    receivedCell.className = 'inventory-received-cell';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'inventory-received-checkbox';
+    checkbox.checked = Boolean(record.received);
+    checkbox.setAttribute('aria-label', '到货状态：' + (record.work || '未命名商品'));
+    checkbox.title = checkbox.checked ? '已到货' : '未到货';
+    checkbox.addEventListener('change', () => {
+      const records = readInventory(category);
+      const target = records.find(item => item.id === record.id);
+      if (!target) { checkbox.checked = !checkbox.checked; return; }
+      target.received = checkbox.checked;
+      if (!saveInventory(category, records)) { checkbox.checked = !checkbox.checked; return; }
+      record.received = checkbox.checked;
+      tr.classList.toggle('inventory-received-row', checkbox.checked);
+      checkbox.title = checkbox.checked ? '已到货' : '未到货';
+    });
+    receivedCell.appendChild(checkbox);
+    tr.appendChild(receivedCell);
     const imageCell = document.createElement('td');
     if (record.image) { const img = document.createElement('img'); img.src = record.image; img.alt = record.work || '商品图片'; img.className = 'inventory-thumb'; imageCell.appendChild(img); }
     else imageCell.textContent = '—';
