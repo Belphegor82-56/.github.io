@@ -138,6 +138,9 @@
 .dream-form textarea { min-height: 100px; resize: vertical; }
 .dream-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .dream-fields label { margin-top: 0; }
+.dream-price-row { display: grid; grid-template-columns: minmax(0, 1fr) 135px; gap: 10px; }
+.dream-price-row input, .dream-price-row select { min-width: 0; }
+.dream-price-field { grid-column: 1 / -1; }
 .dream-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .dream-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-top: 24px; }
 .dream-card { background: rgba(255,255,255,.76); border-radius: 15px; padding: 18px; box-shadow: 0 3px 12px #00000010; min-width: 0; }
@@ -220,9 +223,20 @@
           <img id="dream-preview" alt="所选图片预览" hidden style="max-width:220px;max-height:220px;object-fit:contain;margin-top:12px;border-radius:9px;">
           <div class="dream-fields" style="margin-top:16px;">
             <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
-            <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
-            <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
-            <div><label for="dream-target-price">心理价（可选）</label><input id="dream-target-price" type="number" min="0" step="0.01" placeholder="例如：7000"></div>
+            <div class="dream-price-field">
+              <label for="dream-amount">购买金额</label>
+              <div class="dream-price-row">
+                <input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00">
+                <select id="dream-currency" aria-label="购买金额币种"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select>
+              </div>
+            </div>
+            <div class="dream-price-field">
+              <label for="dream-target-price">心理价（可选）</label>
+              <div class="dream-price-row">
+                <input id="dream-target-price" type="number" min="0" step="0.01" placeholder="例如：7000">
+                <select id="dream-target-currency" aria-label="心理价币种"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select>
+              </div>
+            </div>
           </div>
           <div class="dream-actions">
             <button class="dream-btn" type="submit">保存到本浏览器</button>
@@ -481,6 +495,7 @@ function openDreamForm(record = null) {
   document.getElementById('dream-amount').value = record ? record.amount : '';
   document.getElementById('dream-currency').value = record ? record.currency : 'JPY';
   document.getElementById('dream-target-price').value = record && record.targetPrice != null ? record.targetPrice : '';
+  document.getElementById('dream-target-currency').value = record ? (record.targetCurrency || record.currency || 'JPY') : 'JPY';
   dreamPreview.hidden = !dreamImageData;
   if (dreamImageData) dreamPreview.src = dreamImageData;
   else dreamPreview.removeAttribute('src');
@@ -534,6 +549,7 @@ dreamForm.addEventListener('submit', (event) => {
     status: document.getElementById('dream-status').value,
     amount: Number(amount),
     targetPrice: targetPriceInput === '' ? null : Number(targetPriceInput),
+    targetCurrency: document.getElementById('dream-target-currency').value,
     currency: document.getElementById('dream-currency').value,
     image: dreamImageData
   };
@@ -569,7 +585,8 @@ function renderDreamCards() {
     if (record.targetPrice != null && Number.isFinite(Number(record.targetPrice))) {
       const targetPrice = document.createElement('p');
       targetPrice.className = 'dream-target-price';
-      targetPrice.textContent = '心理价：¥' + Number(record.targetPrice).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
+      const targetCurrency = record.targetCurrency === 'CNY' ? 'CNY' : (record.targetCurrency === 'JPY' ? 'JPY' : currency);
+      targetPrice.textContent = '心理价：¥' + Number(record.targetPrice).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + targetCurrency;
       card.appendChild(targetPrice);
     }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
