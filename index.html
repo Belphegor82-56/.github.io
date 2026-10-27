@@ -150,6 +150,7 @@
 .dream-status { background: #eee9e2; padding: 5px 10px; border-radius: 20px; font-size: 13px; }
 .dream-status.received { background: #e2eee4; }
 .dream-note { font-size: 13px; color: #756e66; }
+.dream-target-price { font-size: 14px; color: #756e66; margin: 6px 0 12px; }
 @media (max-width: 600px) { .dream-fields { grid-template-columns: 1fr; } }
 @media (max-width: 1000px) {#dream-list {grid-template-columns: repeat(2, minmax(0, 1fr));}}
 @media (max-width: 600px) { #dream-list { grid-template-columns: 1fr; }}
@@ -221,6 +222,7 @@
             <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
             <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
             <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+            <div><label for="dream-target-price">心理价（可选）</label><input id="dream-target-price" type="number" min="0" step="0.01" placeholder="例如：7000"></div>
           </div>
           <div class="dream-actions">
             <button class="dream-btn" type="submit">保存到本浏览器</button>
@@ -478,6 +480,7 @@ function openDreamForm(record = null) {
   document.getElementById('dream-status').value = record ? record.status : '未收到';
   document.getElementById('dream-amount').value = record ? record.amount : '';
   document.getElementById('dream-currency').value = record ? record.currency : 'JPY';
+  document.getElementById('dream-target-price').value = record && record.targetPrice != null ? record.targetPrice : '';
   dreamPreview.hidden = !dreamImageData;
   if (dreamImageData) dreamPreview.src = dreamImageData;
   else dreamPreview.removeAttribute('src');
@@ -516,6 +519,10 @@ dreamForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const name = document.getElementById('dream-name').value.trim();
   const amount = document.getElementById('dream-amount').value;
+  const targetPriceInput = document.getElementById('dream-target-price').value.trim();
+  if (targetPriceInput !== '' && (!Number.isFinite(Number(targetPriceInput)) || Number(targetPriceInput) < 0)) {
+    alert('请填写有效的心理价，或留空'); return;
+  }
   if (!name || amount === '' || !Number.isFinite(Number(amount)) || Number(amount) < 0) {
     alert('请填写名称和有效金额'); return;
   }
@@ -526,6 +533,7 @@ dreamForm.addEventListener('submit', (event) => {
     description: document.getElementById('dream-description').value.trim(),
     status: document.getElementById('dream-status').value,
     amount: Number(amount),
+    targetPrice: targetPriceInput === '' ? null : Number(targetPriceInput),
     currency: document.getElementById('dream-currency').value,
     image: dreamImageData
   };
@@ -558,6 +566,12 @@ function renderDreamCards() {
     const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
     amount.textContent = (currency === 'JPY' ? '¥' : '¥') + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
     meta.append(status, amount); card.appendChild(meta);
+    if (record.targetPrice != null && Number.isFinite(Number(record.targetPrice))) {
+      const targetPrice = document.createElement('p');
+      targetPrice.className = 'dream-target-price';
+      targetPrice.textContent = '心理价：¥' + Number(record.targetPrice).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
+      card.appendChild(targetPrice);
+    }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
     const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
     const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
