@@ -216,25 +216,26 @@
 
 
       <section id="inventory-content" hidden aria-label="商品收藏表格">
-        <p class="dream-note">记录仅保存在当前浏览器中，不会自动同步到 GitHub。请定期备份重要内容。</p>
+        <p class="dream-note">Excel 初始收藏已内置在网页中；后续新增、编辑和删除仅保存在当前浏览器，请定期备份。</p>
         <div class="inventory-toolbar"><button id="inventory-add" type="button" class="dream-btn">＋ 添加记录</button></div>
         <form id="inventory-form" class="inventory-form" hidden>
           <h3 id="inventory-form-title">新增记录</h3>
           <div class="inventory-fields">
-            <label>作品名 *<input name="work" type="text" required maxlength="160"></label>
+            <label>作品名<input name="work" type="text" maxlength="160"></label>
             <label>版本<input name="version" type="text" maxlength="120"></label>
-            <label>数量 *<input name="quantity" type="number" min="1" step="1" value="1" required></label>
+            <label>数量<input name="quantity" type="number" min="1" step="1" placeholder="可留空"></label>
             <label>价格<div class="inventory-price"><input name="price" type="number" min="0" step="0.01" placeholder="0.00"><select name="currency"><option value="JPY">JPY 日元</option><option value="CNY">CNY 人民币</option></select></div></label>
             <label>种类<input name="kind" type="text" placeholder="自由输入"></label>
             <label>下单平台<input name="platform" type="text" placeholder="例如 Animate"></label>
+            <label>支付方式<input name="payment" type="text" placeholder="例如 PayPay"></label>
             <label>出荷方式<input name="shipping" type="text" placeholder="自由输入"></label>
             <label>下单日期<input name="orderDate" type="date"></label>
-            <label>出荷日期<input name="shipDate" type="date"></label>
+            <label>出荷日期<input name="shipDate" type="text" placeholder="例如 2026-12-15 / 2026年11月 中"></label>
             <label class="inventory-wide">商品图片（单张，自动压缩）<input id="inventory-image" type="file" accept="image/*"><img id="inventory-preview" class="inventory-preview" alt="图片预览" hidden></label>
           </div>
           <div class="dream-actions"><button type="submit" class="dream-btn">保存到本浏览器</button><button id="inventory-cancel" type="button" class="dream-btn">取消</button></div>
         </form>
-        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>种类</th><th>下单平台</th><th>出荷方式</th><th>下单日期</th><th>出荷日期</th><th>操作</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>种类</th><th>下单平台</th><th>支付方式</th><th>出荷方式</th><th>下单日期</th><th>出荷日期</th><th>操作</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
       </section>
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
@@ -243,7 +244,7 @@
         <form id="dream-form" class="dream-form" hidden>
           <h3 id="dream-form-heading">新增收藏记录</h3>
           <label for="dream-name">收藏品名称</label>
-          <input id="dream-name" type="text" maxlength="120" required placeholder="例如：角色立牌 / 缶バッジ">
+          <input id="dream-name" type="text" maxlength="120" placeholder="例如：角色立牌 / 缶バッジ">
           <label for="dream-description">文字记录</label>
           <textarea id="dream-description" placeholder="购买时间、店铺、心得等……"></textarea>
           <label for="dream-image">上传图片（单张，自动压缩后保存在本浏览器）</label>
@@ -251,7 +252,7 @@
           <img id="dream-preview" alt="所选图片预览" hidden style="max-width:220px;max-height:220px;object-fit:contain;margin-top:12px;border-radius:9px;">
           <div class="dream-fields" style="margin-top:16px;">
             <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
-            <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+            <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
             <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
             <div><label for="dream-target-price">心理价（可填写范围，例如 300-400）</label><input id="dream-target-price" type="text" maxlength="100" placeholder="例如 300-400"></div>
             <div><label for="dream-target-currency">心理价币种</label><select id="dream-target-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
@@ -568,8 +569,8 @@ dreamForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const name = document.getElementById('dream-name').value.trim();
   const amount = document.getElementById('dream-amount').value;
-  if (!name || amount === '' || !Number.isFinite(Number(amount)) || Number(amount) < 0) {
-    alert('请填写名称和有效金额'); return;
+  if (amount !== '' && (!Number.isFinite(Number(amount)) || Number(amount) < 0)) {
+    alert('金额请输入有效的非负数字，或留空'); return;
   }
   const records = readDreamRecords();
   const record = {
@@ -577,7 +578,7 @@ dreamForm.addEventListener('submit', (event) => {
     name,
     description: document.getElementById('dream-description').value.trim(),
     status: document.getElementById('dream-status').value,
-    amount: Number(amount),
+    amount: amount === '' ? '' : Number(amount),
     currency: document.getElementById('dream-currency').value,
     targetPrice: document.getElementById('dream-target-price').value.trim(),
     targetCurrency: document.getElementById('dream-target-currency').value,
@@ -610,7 +611,7 @@ function renderDreamCards() {
     const status = document.createElement('span'); status.className = 'dream-status' + (record.status === '收到' ? ' received' : ''); status.textContent = record.status === '收到' ? '已收到' : '未收到';
     const amount = document.createElement('strong');
     const currency = record.currency === 'CNY' ? 'CNY' : 'JPY';
-    amount.textContent = (currency === 'JPY' ? '¥' : '¥') + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
+    amount.textContent = record.amount === '' || record.amount == null ? '金额未填写' : '¥' + Number(record.amount).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + currency;
     meta.append(status, amount); card.appendChild(meta);
     const targetPrice = record.targetPrice ?? record.idealPrice;
     if (targetPrice !== undefined && targetPrice !== null && String(targetPrice).trim() !== '') {
@@ -638,11 +639,12 @@ const inventoryImage = document.getElementById('inventory-image');
 const inventoryPreview = document.getElementById('inventory-preview');
 let inventoryEditingId = null;
 let inventoryImageData = '';
-const inventoryFields = ['work','version','quantity','price','currency','kind','platform','shipping','orderDate','shipDate'];
+const inventoryFields = ['work','version','quantity','price','currency','kind','platform','payment','shipping','orderDate','shipDate'];
 function inventoryCategory() { return decodeURIComponent(location.hash.slice(1)); }
 function inventoryKey(category) { return 'anns-website-inventory-v1-' + category; }
+const excelInventoryBaseline = {"卡带":[{"id":"excel-卡带-2","image":"","work":"Le Mirage Mystique","version":"限定 水底のLumiere BOX アニメイト限定セット","quantity":"1","price":"16830","currency":"JPY","kind":"游戏卡带","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-09-10","shipDate":"2026-09-17","payment":"Paypay"},{"id":"excel-卡带-3","image":"","work":"Le Mirage Mystique","version":"【限定 水底のLumiere BOX】★スペシャルステラセット","quantity":"1","price":"19855","currency":"JPY","kind":"游戏卡带","platform":"ステラワース","shipping":"配送","orderDate":"2026-09-13","shipDate":"2026-09-17","payment":"ATMペイジー払い"},{"id":"excel-卡带-4","image":"","work":"Sullyland Nursery Rhyme","version":"通常版 NS版　★店舗特典　アクリルフィギュア6種セット付き (－)","quantity":"1","price":"12240","currency":"JPY","kind":"游戏卡带","platform":"トレーダーオンライン","shipping":"配送","orderDate":"2026-09-14","shipDate":"2026-10-01","payment":"credit"},{"id":"excel-卡带-5","image":"","work":"Sullyland Nursery Rhyme","version":"【WonderGOOオリジナル限定セット】","quantity":"1","price":"17380","currency":"JPY","kind":"游戏卡带","platform":"WonderGOO","shipping":"配送","orderDate":"2026-09-14","shipDate":"2026-10-01","payment":"ATMペイジー払い"},{"id":"excel-卡带-6","image":"","work":"Sullyland Nursery Rhyme","version":"特装版 ビックカメラ・アニメガ×ソフマップ限定セット 【Switchゲームソフト】 ◆メーカー特典「デジタルボイスドラマ」","quantity":"1","price":"11900","currency":"JPY","kind":"游戏卡带","platform":"ソフマップ・ドットコム","shipping":"配送","orderDate":"","shipDate":"2026-10-01","payment":"Paypay"},{"id":"excel-卡带-7","image":"","work":"大穢","version":"ステラセット※早期予約特典付","quantity":"1","price":"11110","currency":"JPY","kind":"游戏卡带","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"2026-12-24","payment":"ATMペイジー払い"},{"id":"excel-卡带-8","image":"","work":"CRAZY CHA！N -エルピスの鎖-","version":"【特装版】★スペシャルステラセット クロノールver.(再販)","quantity":"1","price":"17930","currency":"JPY","kind":"游戏卡带","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"2026-10-15","payment":"ATMペイジー払い"},{"id":"excel-卡带-9","image":"","work":"CRAZY CHA！N -エルピスの鎖-","version":"【特装版】★スペシャルステラセット ヴァーデスver.(再販)","quantity":"1","price":"17930","currency":"JPY","kind":"游戏卡带","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"2026-10-15","payment":"ATMペイジー払い"},{"id":"excel-卡带-10","image":"","work":"大穢","version":"アニメイト限定セット 有償特典 / ミラー+アクリルプロップス+扇子","quantity":"1","price":"24860","currency":"JPY","kind":"游戏卡带","platform":"アニメイト","shipping":"配送","orderDate":"2026-09-29","shipDate":"2026-12-24","payment":"Paypay"}],"通贩":[{"id":"excel-通贩-2","image":"","work":"銀魂","version":"【フィギュア】G.E.M.シリーズ 銀魂 神威 ver.弐 完成品フィギュア[限定復刻版]【再販】","quantity":"1","price":"19800","currency":"JPY","kind":"手办","platform":"アニメイト","shipping":"配送","orderDate":"2026-09-10","shipDate":"2026年12月 下旬","payment":"PayPay"},{"id":"excel-通贩-3","image":"","work":"佐々木と宮野","version":"【グッズ-ブロマイド】佐々木と宮野 ぱしゃこれ／第2弾【BOX販売】","quantity":"1","price":"2750","currency":"JPY","kind":"纸片","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-09-10","shipDate":"2026-12-11","payment":"PayPay"},{"id":"excel-通贩-4","image":"","work":"大穢","version":"【グッズ-スタンドポップ】『大穢』 アクリルスタンド①大崎【カラオケの鉄人コラボ】","quantity":"1","price":"1760","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"配送","orderDate":"2026-09-23","shipDate":"2026年11月 中","payment":"PayPay"},{"id":"excel-通贩-5","image":"","work":"大穢","version":"【グッズ-スタンドポップ】『大穢』 アクリルスタンド③新橋【カラオケの鉄人コラボ】","quantity":"1","price":"1760","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"配送","orderDate":"2026-09-23","shipDate":"2026年11月 中","payment":"PayPay"},{"id":"excel-通贩-6","image":"","work":"大穢","version":"【グッズ-カード】『大穢』 トレーディングアクリルカードDbox【カラオケの鉄人コラボ】","quantity":"10","price":"5500","currency":"JPY","kind":"亚克力制品","platform":"アニメイト","shipping":"配送","orderDate":"2026-09-23","shipDate":"2026年11月 中","payment":"PayPay"},{"id":"excel-通贩-7","image":"","work":"Collar×Malice","version":"ステラver. アクリルスタンド06 白石景之","quantity":"1","price":"1870","currency":"JPY","kind":"立牌","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"2026-11-01","payment":"ATM決済(ペイジー)"},{"id":"excel-通贩-8","image":"","work":"Collar×Malice","version":"トレーディング リボンタイアクリルプレートキーチェーン","quantity":"15","price":"13500","currency":"JPY","kind":"亚克力制品","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"","payment":"ATM決済(ペイジー)"},{"id":"excel-通贩-9","image":"","work":"Collar×Malice","version":"リボンver. アクリルスタンド06 白石景之","quantity":"1","price":"1870","currency":"JPY","kind":"立牌","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"","payment":"ATM決済(ペイジー)"},{"id":"excel-通贩-10","image":"","work":"Collar×Malice","version":"投げキッスver. アクリルスタンド06 白石景之","quantity":"1","price":"1870","currency":"JPY","kind":"立牌","platform":"ステラワース","shipping":"配送","orderDate":"","shipDate":"","payment":"ATM決済(ペイジー)"},{"id":"excel-通贩-11","image":"","work":"ペルソナ３","version":"るかっぷ ペルソナ３ リロード 主人公（アトラスDショップ限定特典付き）\n（P3R主人公（アトラスDショップ限定特典付き））","quantity":"1","price":"4950","currency":"JPY","kind":"手办","platform":"KADOKAWA(カドスト)","shipping":"配送","orderDate":"2026-09-09","shipDate":"2027年2月下旬","payment":"PayPay"},{"id":"excel-通贩-12","image":"","work":"ジョジョの奇妙な冒険7","version":"Ｔｈｅ　Ａｎｉｍａｔｉｏｎ　ＳＰＥＣＩＡＬ　ＳＯＵＮＤＴＲＡＣＫ　ｓｅｌｅｃｔｅｄ　ｂｙ　ＪＯＪＯ　Ｍａｇａｚｉｎｅ　ＢＥ１","quantity":"1","price":"7480","currency":"JPY","kind":"其他","platform":"ジャンプキャラクターズストア","shipping":"配送（杨主任家）","orderDate":"2026-04-09","shipDate":"2026年11月下旬","payment":"クレジットカード"},{"id":"excel-通贩-13","image":"","work":"ジョジョの奇妙な冒険7","version":"ＡＵＲＥＸ　ＡＸ－ＲＰ１０　ＪＯＪＯ　ｍａｇａｚｉｎｅ　Ｅｄｉｔｉｏｎ","quantity":"1","price":"19800","currency":"JPY","kind":"其他","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-通贩-14","image":"","work":"P30th","version":"キャンバスボード（P3主人公）【@Loppi・HMV】","quantity":"1","price":"4400","currency":"JPY","kind":"亚克力制品","platform":"HMV books","shipping":"配送（杨主任家）","orderDate":"2026-08-03","shipDate":"2026-11-12","payment":"クレジットカード"},{"id":"excel-通贩-15","image":"","work":"P30th","version":"P30th アクリルスタンド（P5主人公）【ローソン・@Loppi・HMV限定】","quantity":"1","price":"1980","currency":"JPY","kind":"亚克力制品","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-通贩-16","image":"","work":"P30th","version":"P30th アクリルスタンド（P3主人公）【ローソン・@Loppi・HMV限定】","quantity":"1","price":"1980","currency":"JPY","kind":"亚克力制品","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-通贩-17","image":"","work":"佐々木と宮野","version":"繋がるアクリルスタンド ダークチャイナ Ver. 平野大河","quantity":"1","price":"1980","currency":"JPY","kind":"立牌","platform":"TAPIOCA online shop","shipping":"配送","orderDate":"2026-09-29","shipDate":"2026年12月下旬","payment":"PayPay"},{"id":"excel-通贩-24","image":"","work":"大穢","version":"【12月再販】ADELTA展 アクリルスタンド 大穢","quantity":"1","price":"1650","currency":"JPY","kind":"立牌","platform":"ステラワース","shipping":"配送","orderDate":"2026-10-01","shipDate":"2026-12-24","payment":"クレジットカード"},{"id":"excel-通贩-36","image":"","work":"うらみちお兄さん","version":"B-3 アクリルスタンド 兎原跳吉","quantity":"1","price":"770","currency":"JPY","kind":"立牌","platform":"FUKUYA online","shipping":"配送","orderDate":"2026-09-30","shipDate":"2027年1月下旬～2月上旬","payment":"クレジットカード"},{"id":"excel-通贩-51","image":"","work":"古書店街の橋姫「拾年レコード」","version":"7インチレコード「てのなるほうへ」 拾年レコードver","quantity":"1","price":"5000","currency":"JPY","kind":"其他","platform":"PLANET MAGIC","shipping":"配送","orderDate":"2026-10-02","shipDate":"ご注文から2週間前後","payment":"PayPay"},{"id":"excel-通贩-61","image":"","work":"ダンガンロンパシリーズ","version":"野崎つばたさんイラスト 最原終一 飼育係ver. 特大アクリルスタンド","quantity":"1","price":"3300","currency":"JPY","kind":"立牌","platform":"colleize","shipping":"配送","orderDate":"2026-10-09","shipDate":"2027-01-30","payment":"クレジットカード"},{"id":"excel-通贩-65","image":"","work":"家庭教師ヒットマンREBORN!","version":"ねんどろいど 六道骸 10年後Ver.","quantity":"1","price":"7200","currency":"JPY","kind":"手办","platform":"GSC","shipping":"配送","orderDate":"2026-10-14","shipDate":"2026 12月","payment":"PayPal"},{"id":"excel-通贩-66","image":"","work":"家庭教師ヒットマンREBORN!","version":"ねんどろいど 六道骸 2.0","quantity":"1","price":"6800","currency":"JPY","kind":"手办","platform":"GSC","shipping":"配送","orderDate":"2026-10-14","shipDate":"立刻发送","payment":"PayPal"},{"id":"excel-通贩-67","image":"","work":"家庭教師ヒットマンREBORN!","version":"アクリルＧＩＧＡフィギュア　六道骸　ＢＥ４","quantity":"1","price":"12100","currency":"JPY","kind":"立牌","platform":"JCS","shipping":"配送（杨主任家）","orderDate":"2026-10-14","shipDate":"2027-03-01","payment":"クレジットカード"},{"id":"excel-通贩-68","image":"","work":"家庭教師ヒットマンREBORN!","version":"アクリルスタンド M-CG (六道 骸)","quantity":"1","price":"1650","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-10-16","shipDate":"立刻发送","payment":"PayPay"},{"id":"excel-通贩-69","image":"","work":"家庭教師ヒットマンREBORN!","version":"れとぽぷ 第3弾 アクリルスタンド（全8種）フラン","quantity":"1","price":"1320","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-10-16","shipDate":"立刻发送","payment":"PayPay"},{"id":"excel-通贩-70","image":"","work":"家庭教師ヒットマンREBORN!","version":"家庭教師ヒットマンREBORN!×SANRIO CHARACTERS ホログラムアクリルスタンド05/六道骸×バッドばつ丸","quantity":"1","price":"1980","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-10-16","shipDate":"立刻发送","payment":"PayPay"},{"id":"excel-通贩-71","image":"","work":"家庭教師ヒットマンREBORN!","version":"家庭教師ヒットマンREBORN!×SANRIO CHARACTERS アクリルスタンド56/六道骸×バッドばつ丸","quantity":"1","price":"1980","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-10-16","shipDate":"2026年11月 中","payment":"PayPay"},{"id":"excel-通贩-72","image":"","work":"家庭教師ヒットマンREBORN!","version":"家庭教師ヒットマンREBORN! アクリルスタンド -風- (C 六堂 骸(10年後))","quantity":"1","price":"1980","currency":"JPY","kind":"立牌","platform":"アニメイト","shipping":"アニメイト自取","orderDate":"2026-10-16","shipDate":"2026年10月 中","payment":"PayPay"}],"中古":[{"id":"excel-中古-2","image":"","work":"古書店街の橋姫","version":"純喫茶 in キャラウムカフェ アクリルブロックコレクション【ミニキャラver.】 水上","quantity":"1","price":"1093","currency":"JPY","kind":"亚克力制品","platform":"駿河屋","shipping":"配達","orderDate":"","shipDate":"","payment":"paypay"},{"id":"excel-中古-3","image":"","work":"古書店街の橋姫","version":"文学朗読 vol.1 「蜘蛛の糸」 / ADELTA","quantity":"1","price":"3610","currency":"JPY","kind":"音像制品","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-4","image":"","work":"家庭教師ヒットマンREBORN!","version":"「天野明展 The Characters 豆ガシャ色紙」雲雀恭弥","quantity":"1","price":"1007","currency":"JPY","kind":"色纸","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-5","image":"","work":"古書店街の橋姫","version":"POP UP SHOP in MEDICOS SHOP新宿 描き下ろし缶バッジコレクション vol.2 水上","quantity":"1","price":"380","currency":"JPY","kind":"吧唧","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-6","image":"","work":"家庭教師ヒットマンREBORN!","version":"創刊50周年記念 週刊少年ジャンプ展 VOL.3 ファン感謝デー 追加来場者特典 六道骸 来場記念証","quantity":"1","price":"69480","currency":"JPY","kind":"亚克力制品","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-7","image":"","work":"家庭教師ヒットマンREBORN!","version":"天野明展 The Charactersグッズ B2グラフィックポスター ボンゴレファミリー","quantity":"1","price":"2850","currency":"JPY","kind":"纸片","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-8","image":"","work":"家庭教師ヒットマンREBORN!","version":"POP UP SHOP in AmiAmi 六道骸 描き下ろし 夢見る玉座ver. BIGアクリルスタンド","quantity":"1","price":"1472","currency":"JPY","kind":"","platform":"","shipping":"配送","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-9","image":"","work":"家庭教師ヒットマンREBORN!","version":"POP UP SHOP in AmiAmi フラン 描き下ろし 夢見る玉座ver. BIGアクリルスタンド","quantity":"1","price":"2116","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-10","image":"","work":"文字化化","version":"キャラ福くじONLINE 這いばい男 アクリルキーホルダー C-1賞","quantity":"1","price":"552","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-11","image":"","work":"家庭教師ヒットマンREBORN!","version":"ぴた!でふぉめ 缶バッジ Vor.2 六道骸","quantity":"1","price":"1086","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-12","image":"","work":"家庭教師ヒットマンREBORN!","version":"ぴた!でふぉめ 未来編 アクリルスタンド 六道骸","quantity":"1","price":"1297","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-13","image":"","work":"家庭教師ヒットマンREBORN!","version":"ひこくじ -FIGHT IT OUT- 六道骸 アクリルスタンドB賞","quantity":"1","price":"3404","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-14","image":"","work":"家庭教師ヒットマンREBORN!","version":"POP UP SHOP vol.3 in AMNIBUS STORE フラン 描き下ろしイラスト 玉座ver. 特大アクリルスタンド","quantity":"1","price":"1932","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-15","image":"","work":"家庭教師ヒットマンREBORN!","version":"×animatecafe CoLotta トレーディングアクリルプレートキーホルダー フラン","quantity":"1","price":"248","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""},{"id":"excel-中古-16","image":"","work":"ジョジョの奇妙な冒険 第七部 スティール・ボール・ラン","version":"「ジョジョキャラバン」 箔押しクリアカードコレクションB ジョニィ・ジョースター","quantity":"1","price":"2208","currency":"JPY","kind":"","platform":"","shipping":"","orderDate":"","shipDate":"","payment":""}]};
 function readInventory(category) {
-  try { const records = JSON.parse(localStorage.getItem(inventoryKey(category)) || '[]'); return Array.isArray(records) ? records : []; }
+  try { const saved = localStorage.getItem(inventoryKey(category)); const records = saved === null ? (excelInventoryBaseline[category] || []) : JSON.parse(saved); return Array.isArray(records) ? records : []; }
   catch(error) { console.error(error); return []; }
 }
 function saveInventory(category, records) {
@@ -658,7 +660,7 @@ function openInventoryForm(record = null) {
     const control = inventoryForm.elements.namedItem(field);
     if (control && record && record[field] !== undefined && record[field] !== null) control.value = String(record[field]);
   });
-  if (!record) { inventoryForm.elements.namedItem('quantity').value = '1'; inventoryForm.elements.namedItem('currency').value = 'JPY'; }
+  if (!record) { inventoryForm.elements.namedItem('quantity').value = ''; inventoryForm.elements.namedItem('currency').value = 'JPY'; }
   inventoryPreview.hidden = !inventoryImageData;
   if (inventoryImageData) inventoryPreview.src = inventoryImageData;
   else inventoryPreview.removeAttribute('src');
@@ -695,10 +697,11 @@ inventoryForm.addEventListener('submit', event => {
   const category = inventoryCategory();
   if (!inventoryCategories.includes(category)) return;
   const work = inventoryForm.elements.namedItem('work').value.trim();
-  const quantity = Number(inventoryForm.elements.namedItem('quantity').value);
+  const quantityText = inventoryForm.elements.namedItem('quantity').value.trim();
+  const quantity = quantityText === '' ? '' : Number(quantityText);
   const priceText = inventoryForm.elements.namedItem('price').value;
-  if (!work || !Number.isInteger(quantity) || quantity < 1 || (priceText !== '' && (!Number.isFinite(Number(priceText)) || Number(priceText) < 0))) {
-    alert('请填写作品名及有效数量、价格'); return;
+  if ((quantityText !== '' && (!Number.isInteger(quantity) || quantity < 1)) || (priceText !== '' && (!Number.isFinite(Number(priceText)) || Number(priceText) < 0))) {
+    alert('数量和价格如有填写，请输入有效数字；也可以留空'); return;
   }
   const records = readInventory(category);
   const record = { id: inventoryEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+'-'+Math.random()), image: inventoryImageData };
@@ -717,7 +720,7 @@ function renderInventory(category) {
   const records = readInventory(category);
   if (!records.length) {
     const tr = document.createElement('tr'); const td = document.createElement('td');
-    td.colSpan = 11; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「添加记录」开始收藏。';
+    td.colSpan = 12; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「添加记录」开始收藏。';
     tr.appendChild(td); inventoryBody.appendChild(tr); return;
   }
   records.forEach(record => {
@@ -726,7 +729,7 @@ function renderInventory(category) {
     if (record.image) { const img = document.createElement('img'); img.src = record.image; img.alt = record.work || '商品图片'; img.className = 'inventory-thumb'; imageCell.appendChild(img); }
     else imageCell.textContent = '—';
     tr.appendChild(imageCell);
-    const values = [record.work,record.version,record.quantity,record.price === '' || record.price == null ? '' : Number(record.price).toLocaleString('zh-CN',{maximumFractionDigits:2})+' '+(record.currency === 'CNY' ? 'CNY' : 'JPY'),record.kind,record.platform,record.shipping,record.orderDate,record.shipDate];
+    const values = [record.work,record.version,record.quantity,record.price === '' || record.price == null ? '' : Number(record.price).toLocaleString('zh-CN',{maximumFractionDigits:2})+' '+(record.currency === 'CNY' ? 'CNY' : 'JPY'),record.kind,record.platform,record.payment,record.shipping,record.orderDate,record.shipDate];
     values.forEach(value => { const td = document.createElement('td'); td.textContent = value === undefined || value === null || value === '' ? '—' : String(value); tr.appendChild(td); });
     const actions = document.createElement('td'); actions.className = 'inventory-actions';
     const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'dream-btn'; edit.textContent = '编辑'; edit.addEventListener('click',() => openInventoryForm(record));
@@ -739,6 +742,20 @@ function renderInventory(category) {
   });
 }
 
+    // Excel 首次导入：合并现有记录，不覆盖已保存的收藏；仅执行一次。
+    function initializeExcelImport() {
+      const marker = 'anns-website-excel-import-20261027-v1';
+      if (localStorage.getItem(marker) === 'done') return;
+      let allSaved = true;
+      for (const category of ['卡带','通贩','中古']) {
+        const existing = readInventory(category);
+        const existingIds = new Set(existing.map(record => record.id));
+        const additions = (excelInventoryBaseline[category] || []).filter(record => !existingIds.has(record.id));
+        if (!saveInventory(category, [...existing, ...additions])) allSaved = false;
+      }
+      if (allSaved) localStorage.setItem(marker, 'done');
+    }
+    initializeExcelImport();
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
