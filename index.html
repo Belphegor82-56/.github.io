@@ -233,6 +233,7 @@
     const archiveEditor = document.getElementById('archive-editor');
     const archiveTitleInput = document.getElementById('archive-title');
     const archiveCancelBtn = document.getElementById('archive-cancel-btn');
+    const archiveSaveBtn = document.getElementById('archive-save-btn');
     
     function updatePage() {
   const category = decodeURIComponent(location.hash.slice(1));
@@ -245,6 +246,8 @@
 
   if (category === '2026') {title.textContent = '2026';description.textContent = 'The Wandering Archive · 2026';loadArchive();} 
   else if (match) {title.textContent = category;description.textContent = '这里可以添加分类 ' + category + ' 的内容。';} else {title.textContent = '我的购物记录';description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';}}
+  let archiveRecords = [];
+  let editingIndex = null;
   async function loadArchive() { archiveList.textContent = '正在加载旅行记录...';
   try { const response = await fetch('data/archive-2026.json');
     if (!response.ok) {throw new Error('无法读取旅行数据');}
