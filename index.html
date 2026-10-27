@@ -177,25 +177,41 @@
     .inventory-received-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5d866d; }
     .inventory-received-row { background: #f4f9f5; }
 
-    /* Minimal editorial homepage — only applies to the home view */
-    /* 纯白极简首页：文字在进入首页时逐渐浮现 */
+    /* Editorial homepage: white, Garamond, local clock, subtle fade */
+    body { margin: 0; }
+    .sidebar { border-right: 1px solid #ebebeb; }
     body.home-view #page-title, body.home-view #page-description { display: none; }
-    body.home-view .content { padding: 32px 38px; background: #fff; }
-    .home-hero { position: relative; width: 100%; min-height: calc(100vh - 95px); margin: 0; padding: 0; border: 0; box-shadow: none; background: #fff; overflow: hidden; }
-    .home-hero-kicker { position: absolute; right: 2%; top: 5%; color: #888; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; }
-    .home-hero-quote { position: absolute; right: 2%; bottom: 8%; margin: 0; max-width: 95%; color: #191919; font-family: 'Bodoni MT', Didot, 'Times New Roman', Georgia, serif; font-weight: 400; font-size: clamp(48px, 6.5vw, 112px); line-height: .98; letter-spacing: -.055em; text-align: right; }
+    body.home-view .content { padding: 0; background: #fff; }
+    body.home-view .site-avatar { display: none; }
+    body.home-view .sidebar { padding: 42px 25px 35px 35px; }
+    body.home-view .sidebar h1 { font-family: Garamond, 'EB Garamond', Georgia, serif; font-size: 27px; font-weight: 400; margin-bottom: 45px; }
+    body.home-view .sidebar h1::after { content: 'PERSONAL ARCHIVE'; display: block; margin-top: 9px; font: 10px Optima, Arial, sans-serif; letter-spacing: .28em; color: #888; }
+    body.home-view .sidebar summary { font: 11px Optima, Arial, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #666; padding: 16px 0; }
+    body.home-view .sidebar details[open] summary { background: transparent; }
+    body.home-view .sidebar .subcategories a { font-size: 15px; padding: 9px 12px; }
+    body.home-view .sidebar .subcategories a.active, body.home-view .sidebar .subcategories a:hover { background: #f5f5f5; color: #222; }
+    .home-hero { position: relative; width: 100%; min-height: 100vh; background: #fff; overflow: hidden; }
+    .home-top-nav { position: absolute; left: 4%; top: 56px; display: flex; flex-wrap: wrap; gap: clamp(14px, 3vw, 45px); }
+    .home-top-nav a { color: #555; text-decoration: none; font: 10px Optima, Arial, sans-serif; letter-spacing: .25em; }
+    .home-top-nav a:hover { color: #111; text-decoration: underline; text-underline-offset: 6px; }
+    .home-clock { position: absolute; top: 35px; right: 3.5%; padding-left: 24px; border-left: 1px solid #bbb; text-align: right; color: #444; font-family: Garamond, Georgia, serif; }
+    .home-clock-time { display: block; font-size: 24px; letter-spacing: .055em; font-variant-numeric: tabular-nums; }
+    .home-clock-date { display: block; margin-top: 7px; font: 11px Optima, Arial, sans-serif; letter-spacing: .12em; }
+    .home-clock-caption { display: block; margin-top: 8px; font: 10px Optima, Arial, sans-serif; letter-spacing: .19em; color: #888; }
+    .home-quote-block { position: absolute; right: 3.5%; bottom: 8%; max-width: 94%; text-align: right; }
+    .home-hero-quote { margin: 0; color: #191919; font-family: Garamond, 'EB Garamond', 'Adobe Garamond Pro', Georgia, serif; font-weight: 400; font-size: clamp(64px, 7.6vw, 128px); line-height: .99; letter-spacing: -.055em; }
     .home-hero-quote span { display: block; }
-    .home-hero-rule { position: absolute; right: 2%; bottom: 3%; width: 30%; border-top: 1px solid #d4d4d4; }
-    @keyframes homeFadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .home-hero-translation { margin: 25px 0 0; color: #999; font-family: 'STXinwei', '华文新魏', 'STKaiti', 'KaiTi', serif; font-size: clamp(13px, 1.2vw, 18px); font-weight: 400; letter-spacing: .14em; }
+    .home-hero-translation::before { content: ''; display: inline-block; width: 36px; margin-right: 20px; border-top: 1px solid #aaa; vertical-align: middle; }
+    @keyframes homeFadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes homeFade { from { opacity: 0; } to { opacity: 1; } }
-    body.home-view .home-hero-kicker { opacity: 0; animation: homeFade 1.2s ease .15s forwards; }
-    body.home-view .home-hero-quote span { opacity: 0; animation: homeFadeUp 1.6s cubic-bezier(.22,1,.36,1) forwards; }
-    body.home-view .home-hero-quote span:first-child { animation-delay: .5s; }
-    body.home-view .home-hero-quote span:last-child { animation-delay: 1.25s; }
-    body.home-view .home-hero-rule { opacity: 0; animation: homeFade 1.3s ease 2.2s forwards; }
-    @media (max-width: 900px) { .home-hero { min-height: 72vh; } .home-hero-quote { font-size: clamp(43px, 7vw, 76px); } }
-    @media (max-width: 600px) { body.home-view .content { padding: 22px 16px; } .home-hero { min-height: 68vh; } .home-hero-kicker { top: 4%; } .home-hero-quote { max-width: 100%; right: 0; bottom: 11%; font-size: clamp(39px, 10vw, 64px); } }
-    @media (prefers-reduced-motion: reduce) { body.home-view .home-hero-kicker, body.home-view .home-hero-quote span, body.home-view .home-hero-rule { opacity: 1; animation: none; transform: none; } }
+    body.home-view .home-hero-quote span { opacity: 0; animation: homeFadeUp 1.4s cubic-bezier(.22,1,.36,1) forwards; }
+    body.home-view .home-hero-quote span:first-child { animation-delay: .35s; }
+    body.home-view .home-hero-quote span:last-child { animation-delay: 1s; }
+    body.home-view .home-hero-translation { opacity: 0; animation: homeFade 1.2s ease 1.8s forwards; }
+    @media (max-width: 950px) { .home-top-nav { top: 32px; } .home-clock { top: 90px; } .home-hero-quote { font-size: clamp(52px, 8vw, 90px); } }
+    @media (max-width: 600px) { body.home-view .sidebar { padding: 20px 22px; } body.home-view .sidebar h1 { margin-bottom: 12px; } .home-hero { min-height: 68vh; } .home-top-nav { top: 20px; left: 5%; gap: 16px; } .home-top-nav a { font-size: 9px; } .home-clock { top: 70px; right: 5%; } .home-clock-time { font-size: 20px; } .home-quote-block { right: 5%; bottom: 12%; } .home-hero-quote { font-size: clamp(39px, 9vw, 65px); } .home-hero-translation { font-size: 13px; } }
+    @media (prefers-reduced-motion: reduce) { body.home-view .home-hero-quote span, body.home-view .home-hero-translation { opacity: 1; animation: none; transform: none; } }
 
   </style>
 </head>
@@ -233,9 +249,18 @@
       <h2 id="page-title">我的购物记录</h2>
       <p id="page-description">记录我买过的好东西。点击左侧分类查看内容。</p>
       <section class="home-hero" id="welcome-card" aria-label="Ann’s Website 首页">
-        <span class="home-hero-kicker">ANN’S PERSONAL ARCHIVE</span>
-        <h2 class="home-hero-quote"><span>I am rooted,</span><span>but I flow.</span></h2>
-        <div class="home-hero-rule" aria-hidden="true"></div>
+        <nav class="home-top-nav" aria-label="首页快捷导航">
+          <a href="#2026">ARCHIVE</a><a href="#卡带">COLLECTION</a><a href="#2025">JOURNEY</a>
+        </nav>
+        <div class="home-clock" aria-label="访问者当地时间">
+          <time id="home-clock-time" class="home-clock-time">--:--</time>
+          <span id="home-clock-date" class="home-clock-date"></span>
+          <span class="home-clock-caption">YOUR LOCAL TIME</span>
+        </div>
+        <div class="home-quote-block">
+          <h2 class="home-hero-quote"><span>I am rooted,</span><span>but I flow.</span></h2>
+          <p class="home-hero-translation">如根深种，如浪翻涌。</p>
+        </div>
       </section>
       
 
@@ -820,6 +845,19 @@ function renderInventory(category) {
       if (allSaved) localStorage.setItem(marker, 'done');
     }
     initializeExcelImport();
+    // The visitor's device clock determines the displayed local time.
+    function updateHomeClock() {
+      const now = new Date();
+      const clockTime = document.getElementById('home-clock-time');
+      const clockDate = document.getElementById('home-clock-date');
+      if (!clockTime || !clockDate) return;
+      clockTime.textContent = new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', hour12: true}).format(now);
+      clockDate.textContent = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}).format(now);
+      clockTime.dateTime = now.toISOString();
+    }
+    updateHomeClock();
+    setInterval(updateHomeClock, 1000);
+
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
