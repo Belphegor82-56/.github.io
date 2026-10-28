@@ -293,6 +293,32 @@
         width: 76px; height: 76px; margin-bottom: 14px;
       }
     }
+
+    /* Minimal archive preview: all sections retain the same sidebar */
+    .sidebar, body.home-view .sidebar { position: relative; overflow: hidden; }
+    .sidebar h1, body.home-view .sidebar h1 {
+      font-family: Optima, 'Palatino Linotype', 'Segoe UI', sans-serif;
+      font-size: 23px; letter-spacing: -.035em; font-weight: 400;
+      text-align: center; margin: 0 0 8px;
+    }
+    .sidebar h1::after, body.home-view .sidebar h1::after { content: none !important; }
+    .site-avatar, body.home-view .site-avatar { margin-bottom: 15px; }
+    .sidebar-coordinates { display: block; width: 100%; background: none; border: 0; padding: 4px 0 19px;
+      color: #898989; font: 9px Optima, Arial, sans-serif; letter-spacing: .09em;
+      text-align: center; cursor: pointer; overflow-wrap: anywhere; }
+    .sidebar-coordinates:hover { color: #333; }
+    .sidebar nav { position: relative; z-index: 1; }
+    .sidebar nav::before { content: '✦'; display: block; color: #777; font-size: 13px; text-align: right;
+      padding: 0 5px 12px; border-top: 1px solid #dedede; margin: 10px 0 5px; }
+    .home-hero::before { content: ''; position: absolute; right: -210px; top: -190px; width: 540px; height: 310px;
+      border-bottom: 1px solid #dedede; border-radius: 50%; transform: rotate(-17deg); pointer-events: none; }
+    .home-hero::after { content: '✦'; position: absolute; right: 13%; top: 90px; font-size: 13px; color: #666; }
+    .home-clock { z-index: 2; }
+    @media (max-width: 600px) {
+      .sidebar h1, body.home-view .sidebar h1 { font-size: 21px; }
+      .sidebar-coordinates { padding-bottom: 10px; }
+      .home-hero::after { top: 165px; }
+    }
   </style>
 </head>
 <body>
@@ -302,6 +328,7 @@
       <h1>
   <a href="index.html">Ann’s Website</a>
 </h1>
+      <button type="button" class="sidebar-coordinates" id="sidebar-coordinates" title="点击授权后显示您当前所在位置的坐标">⌖  SHOW LOCAL COORDINATES</button>
       <nav aria-label="商品分类">
         <details>
           <summary>Gate of Babylon</summary>
@@ -329,9 +356,6 @@
       <h2 id="page-title">我的购物记录</h2>
       <p id="page-description">记录我买过的好东西。点击左侧分类查看内容。</p>
       <section class="home-hero" id="welcome-card" aria-label="Ann’s Website 首页">
-        <nav class="home-top-nav" aria-label="首页快捷导航">
-          <a href="#2026">ARCHIVE</a><a href="#卡带">COLLECTION</a><a href="#2025">JOURNEY</a>
-        </nav>
         <div class="home-clock" aria-label="访问者当地时间">
           <time id="home-clock-time" class="home-clock-time">--:--</time>
           <span id="home-clock-date" class="home-clock-date"></span>
@@ -938,6 +962,25 @@ function renderInventory(category) {
     updateHomeClock();
     setInterval(updateHomeClock, 1000);
 
+
+    // Coordinates are shown only after the visitor explicitly requests location access.
+    const coordinateButton = document.getElementById('sidebar-coordinates');
+    if (coordinateButton) coordinateButton.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        coordinateButton.textContent = 'LOCATION UNAVAILABLE';
+        return;
+      }
+      coordinateButton.textContent = 'LOCATING…';
+      navigator.geolocation.getCurrentPosition(position => {
+        const {latitude, longitude} = position.coords;
+        const lat = Math.abs(latitude).toFixed(4) + '° ' + (latitude >= 0 ? 'N' : 'S');
+        const lon = Math.abs(longitude).toFixed(4) + '° ' + (longitude >= 0 ? 'E' : 'W');
+        coordinateButton.textContent = lat + ' · ' + lon;
+      }, () => {
+        coordinateButton.textContent = '⌖  SHOW LOCAL COORDINATES';
+        coordinateButton.title = '无法获取坐标；请允许浏览器定位权限后重试';
+      }, {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000});
+    });
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
