@@ -1,4 +1,3 @@
-
 backend:
   name: turbo-github
   turbo_site_id: "991ec751-85e3-4211-85c2-713fc21abf11"
@@ -8,29 +7,91 @@ media_folder: "images/uploads"
 public_folder: "/.github.io/images/uploads"
 
 collections:
-  - name: "blog"
-    label: "旅行日记"
-    folder: "posts"
-    create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-    fields:
-      - label: "标题"
-        name: "title"
-        widget: "string"
-
-      - label: "发布日期"
-        name: "date"
-        widget: "datetime"
-
-      - label: "旅行地点"
-        name: "location"
-        widget: "string"
-
-      - label: "封面图片"
-        name: "cover"
-        widget: "image"
-        required: false
-
-      - label: "游记内容"
-        name: "body"
-        widget: "markdown"
+  - name: "travel"
+    label: "旅行日记（公开发布）"
+    files:
+      - name: "travel_2026"
+        label: "2026 年旅行日记"
+        file: "data/public-archive-2026.json"
+        format: "json"
+        fields:
+          - label: "旅行记录"
+            name: "entries"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - {label: "标题", name: "title", widget: "string"}
+              - {label: "正文", name: "body", widget: "text", required: false}
+              - label: "旅行照片"
+                name: "images"
+                widget: "list"
+                required: false
+                field: {label: "照片", name: "image", widget: "image"}
+      - name: "travel_2025"
+        label: "2025 年旅行日记"
+        file: "data/public-archive-2025.json"
+        format: "json"
+        fields:
+          - label: "旅行记录"
+            name: "entries"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - {label: "标题", name: "title", widget: "string"}
+              - {label: "正文", name: "body", widget: "text", required: false}
+              - label: "旅行照片"
+                name: "images"
+                widget: "list"
+                required: false
+                field: {label: "照片", name: "image", widget: "image"}
+      - name: "travel_2024"
+        label: "2024 年旅行日记"
+        file: "data/public-archive-2024.json"
+        format: "json"
+        fields:
+          - label: "旅行记录"
+            name: "entries"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - {label: "标题", name: "title", widget: "string"}
+              - {label: "正文", name: "body", widget: "text", required: false}
+              - label: "旅行照片"
+                name: "images"
+                widget: "list"
+                required: false
+                field: {label: "照片", name: "image", widget: "image"}
+      - name: "travel_2023"
+        label: "2023 年旅行日记"
+        file: "data/public-archive-2023.json"
+        format: "json"
+        fields:
+          - label: "旅行记录"
+            name: "entries"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - {label: "标题", name: "title", widget: "string"}
+              - {label: "正文", name: "body", widget: "text", required: false}
+              - label: "旅行照片"
+                name: "images"
+                widget: "list"
+                required: false
+                field: {label: "照片", name: "image", widget: "image"}
+      - name: "travel_2022"
+        label: "2022 年旅行日记"
+        file: "data/public-archive-2022.json"
+        format: "json"
+        fields:
+          - label: "旅行记录"
+            name: "entries"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - {label: "标题", name: "title", widget: "string"}
+              - {label: "正文", name: "body", widget: "text", required: false}
+              - label: "旅行照片"
+                name: "images"
+                widget: "list"
+                required: false
+                field: {label: "照片", name: "image", widget: "image"}
