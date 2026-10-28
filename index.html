@@ -36,6 +36,8 @@
   .archive-card img {width: 100%; height: auto; border-radius: 12px; margin-top: 12px;}
   .archive-card h3 {font-weight: 500;}
   .archive-card p {line-height: 1.8;}
+  .archive-entry-body {line-height: 1.8; overflow-wrap: anywhere;}
+  .archive-entry-body img {max-width: 100%; height: auto;}
     #archive-editor {
   margin-top: 25px;
   padding: 25px;
@@ -596,74 +598,171 @@
         description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
       }
     }
+  // 旅行记录按年份存储在当前浏览器。已有 JSON 文件作为初始记录读取。
+  const archiveStoragePrefix = 'anns-website-archive-records-v1-';
   let archiveRecords = [];
-  let editingIndex = null;
-  async function loadArchive(year = '2026') {
-  if (year === '2026') {
-    archiveList.textContent = '2026 年还没有旅行记录。';
-    return;
+  let editingArchiveId = null;
+  let activeArchiveYear = null;
+  let archiveLoadSequence = 0;
+  const archiveImagesInput = document.getElementById('archive-images');
+
+  function archiveStorageKey(year) { return archiveStoragePrefix + year; }
+  function readStoredArchive(year) {
+    try {
+      const raw = localStorage.getItem(archiveStorageKey(year));
+      if (raw === null) return null;
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : null;
+    } catch (error) { console.error('读取旅行记录失败', error); return null; }
   }
-  archiveList.textContent = '正在加载旅行记录...';
-  try { const response = await fetch('data/archive-' + year + '.json');
-    if (!response.ok) {throw new Error('无法读取旅行数据');}
-    const records = await response.json();
-    archiveList.innerHTML = '';
-    records.forEach(record => {
+  function persistArchive(year, records) {
+    try {
+      localStorage.setItem(archiveStorageKey(year), JSON.stringify(records));
+      return true;
+    } catch (error) {
+      console.error('保存旅行记录失败', error);
+      alert('保存失败：浏览器存储空间可能不足。请缩小图片后再试。');
+      return false;
+    }
+  }
+  function archiveId() {
+    return 'trip-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function normalizeArchive(record) {
+    return {
+      id: record.id || archiveId(),
+      title: record.title || '',
+      description: record.description || '',
+      html: record.html || '',
+      images: Array.isArray(record.images) ? record.images : []
+    };
+  }
+  function closeArchiveEditor() {
+    archiveEditor.hidden = true;
+    editingArchiveId = null;
+    savedRange = null;
+    archiveImagesInput.value = '';
+    inlineImageInput.value = '';
+  }
+  function openArchiveEditor(record = null) {
+    editingArchiveId = record ? record.id : null;
+    archiveTitleInput.value = record ? record.title : '';
+    richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
+    archiveImagesInput.value = '';
+    savedRange = null;
+    archiveEditor.hidden = false;
+    archiveTitleInput.focus();
+  }
+  function escapeArchiveHtml(value) {
+    const node = document.createElement('div');
+    node.textContent = value || '';
+    return node.innerHTML;
+  }
+  function renderArchive(year) {
+    archiveList.replaceChildren();
+    if (!archiveRecords.length) {
+      archiveList.textContent = year + ' 年还没有旅行记录。';
+      return;
+    }
+    archiveRecords.forEach(record => {
       const card = document.createElement('div');
       card.className = 'archive-card';
       const heading = document.createElement('h3');
-      heading.textContent = record.title;
+      heading.textContent = record.title || '未命名旅行';
       card.appendChild(heading);
-      const paragraph = document.createElement('p');
-      paragraph.textContent = record.description;
-      card.appendChild(paragraph);
-      (record.images || []).forEach(src => {const img = document.createElement('img');img.src = src;img.alt = record.title;card.appendChild(img);});
-      
-      // 创建编辑和删除按钮的容器
+      const body = document.createElement('div');
+      body.className = 'archive-entry-body';
+      if (record.html) {
+        // 只展示自己在本地编辑器中保存的内容，移除潜在的脚本与事件属性。
+        const template = document.createElement('template');
+        template.innerHTML = record.html;
+        template.content.querySelectorAll('script,iframe,object,embed,form,style,link,meta').forEach(n => n.remove());
+        template.content.querySelectorAll('*').forEach(el => {
+          for (const attr of [...el.attributes]) {
+            if (/^on/i.test(attr.name) || ((attr.name === 'src' || attr.name === 'href') && /^\s*javascript:/i.test(attr.value))) el.removeAttribute(attr.name);
+          }
+        });
+        body.appendChild(template.content);
+      } else {
+        body.textContent = record.description || '';
+        body.style.whiteSpace = 'pre-wrap';
+      }
+      card.appendChild(body);
+      (record.images || []).forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = record.title || '旅行照片';
+        img.loading = 'lazy';
+        card.appendChild(img);
+      });
       const actions = document.createElement('div');
       actions.className = 'archive-actions';
-
-      // 编辑按钮
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.textContent = '✏️ 编辑';
-
-      
-    editBtn.addEventListener('click', () => {
-  // 将原来的文章标题填入输入框
-  archiveTitleInput.value = record.title || '';
-
-  // 将原来的文章正文填入编辑器
-  richEditor.textContent = record.description || '';
-
-  // 显示编辑器
-  archiveEditor.hidden = false;
-
-  // 清除旧的光标位置
-  savedRange = null;
-
-  // 自动定位到标题
-  archiveTitleInput.focus();
-});
-
-      // 删除按钮
+      editBtn.textContent = '编辑';
+      editBtn.addEventListener('click', () => openArchiveEditor(record));
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
-      deleteBtn.textContent = '🗑️ 删除';
-
-      // 把按钮放进容器
-      actions.appendChild(editBtn);
-      actions.appendChild(deleteBtn);
-
-      // 把按钮容器放到卡片底部
+      deleteBtn.textContent = '删除';
+      deleteBtn.addEventListener('click', () => {
+        if (!confirm('确定删除这条旅行记录吗？')) return;
+        const next = archiveRecords.filter(item => item.id !== record.id);
+        if (!persistArchive(year, next)) return;
+        archiveRecords = next;
+        if (editingArchiveId === record.id) closeArchiveEditor();
+        renderArchive(year);
+      });
+      actions.append(editBtn, deleteBtn);
       card.appendChild(actions);
-
-      // 最后把卡片显示到网页上
       archiveList.appendChild(card);
     });
-
-    if (records.length === 0) {archiveList.textContent = year + ' 年还没有旅行记录。';}} 
-  catch (error) {archiveList.textContent = '';console.error(error);}}
+  }
+  async function loadArchive(year = '2026') {
+    activeArchiveYear = year;
+    closeArchiveEditor();
+    const sequence = ++archiveLoadSequence;
+    const stored = readStoredArchive(year);
+    if (stored !== null) {
+      archiveRecords = stored.map(normalizeArchive);
+      renderArchive(year);
+      return;
+    }
+    if (year === '2026') {
+      archiveRecords = [];
+      renderArchive(year);
+      return;
+    }
+    archiveList.textContent = '正在加载旅行记录...';
+    try {
+      const response = await fetch('data/archive-' + year + '.json');
+      if (!response.ok) throw new Error('无法读取旅行数据');
+      const data = await response.json();
+      if (sequence !== archiveLoadSequence) return;
+      archiveRecords = (Array.isArray(data) ? data : []).map(normalizeArchive);
+    } catch (error) {
+      if (sequence !== archiveLoadSequence) return;
+      console.info('未找到旅行记录文件，将使用空白记录', error);
+      archiveRecords = [];
+    }
+    renderArchive(year);
+  }
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+  async function persistInlineImages() {
+    const imgs = [...richEditor.querySelectorAll('img')];
+    for (const img of imgs) {
+      if (!img.src.startsWith('blob:')) continue;
+      const response = await fetch(img.src);
+      const blob = await response.blob();
+      img.src = await readFileAsDataURL(blob);
+    }
+  }
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
     italicBtn.addEventListener('click', () => {formatText('italic');});
@@ -731,25 +830,35 @@ inlineImageInput.addEventListener('change', () => {
 });
 
     
-addArchiveBtn.addEventListener('click', () => {
-  archiveTitleInput.value = '';
-
-  richEditor.innerHTML = '';
-
-  savedRange = null;
-
-  archiveEditor.hidden = false;
-
-  archiveTitleInput.focus();
+addArchiveBtn.addEventListener('click', () => openArchiveEditor());
+archiveCancelBtn.addEventListener('click', closeArchiveEditor);
+archiveSaveBtn.addEventListener('click', async () => {
+  const year = activeArchiveYear;
+  if (!year) return;
+  archiveSaveBtn.disabled = true;
+  try {
+    await persistInlineImages();
+    const images = await Promise.all([...archiveImagesInput.files].map(readFileAsDataURL));
+    const old = archiveRecords.find(item => item.id === editingArchiveId);
+    const record = {
+      id: old ? old.id : archiveId(),
+      title: archiveTitleInput.value.trim(),
+      description: richEditor.innerText,
+      html: richEditor.innerHTML,
+      images: [...(old ? old.images : []), ...images]
+    };
+    const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
+    if (!persistArchive(year, next)) return;
+    archiveRecords = next;
+    closeArchiveEditor();
+    renderArchive(year);
+  } catch (error) {
+    console.error(error);
+    alert('保存失败，请检查所选图片后重试。');
+  } finally {
+    archiveSaveBtn.disabled = false;
+  }
 });
-
-archiveCancelBtn.addEventListener('click', () => {
-  archiveEditor.hidden = true;
-  savedRange = null;
-});
-
-
-    
 
 // 梦情收藏：仅存储于当前浏览器（localStorage），不是 GitHub 云端保存
 const dreamKey = 'anns-website-dream-records-v1';
