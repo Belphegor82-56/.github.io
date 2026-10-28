@@ -610,10 +610,17 @@
         ? '已登录：可以编辑'
         : '访客模式：仅浏览';
 
+      
       document.querySelectorAll('.archive-actions')
         .forEach(el => {
           el.hidden = !archiveAuthenticated;
         });
+
+      // 未登录时关闭编辑器
+      if (!archiveAuthenticated && archiveEditor) {
+        archiveEditor.hidden = true;
+      }
+
     }
 
     archiveLoginBtn.addEventListener('click', () => {
