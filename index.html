@@ -324,6 +324,17 @@
       .sidebar-coordinates { padding-bottom: 10px; }
       .home-hero::after { top: 165px; }
     }
+
+    /* Collection typography only; all other layout and features unchanged */
+    .sidebar .subcategories a[data-category="卡带"],
+    .sidebar .subcategories a[data-category="通贩"],
+    .sidebar .subcategories a[data-category="梦情"],
+    .sidebar .subcategories a[data-category="中古"] {
+      font-family: 'STXinwei', '华文新魏', 'STKaiti', 'KaiTi', serif;
+      font-style: italic;
+    }
+    body.collection-view #page-title { font-size: clamp(25px, 2.2vw, 32px); }
+    body.collection-view #page-description { display: none; }
   </style>
 </head>
 <body>
@@ -377,8 +388,7 @@
 
 
       <section id="inventory-content" hidden aria-label="商品收藏表格">
-        <p class="dream-note">Excel 初始收藏已内置在网页中；后续新增、编辑和删除仅保存在当前浏览器，请定期备份。</p>
-        <div class="inventory-toolbar"><button id="inventory-add" type="button" class="dream-btn">＋ 添加记录</button></div>
+        <div class="inventory-toolbar"><button id="inventory-add" type="button" class="dream-btn">＋ 添加</button></div>
         <form id="inventory-form" class="inventory-form" hidden>
           <h3 id="inventory-form-title">新增记录</h3>
           <div class="inventory-fields">
@@ -401,7 +411,7 @@
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
         <p class="dream-note">记录保存在当前浏览器中，不会自动同步到 GitHub 或其他设备。请定期备份重要内容。</p>
-        <div class="dream-toolbar"><button id="dream-add" class="dream-btn" type="button">＋ 添加收藏记录</button></div>
+        <div class="dream-toolbar"><button id="dream-add" class="dream-btn" type="button">＋ 添加</button></div>
         <form id="dream-form" class="dream-form" hidden>
           <h3 id="dream-form-heading">新增收藏记录</h3>
           <label for="dream-name">收藏品名称</label>
@@ -493,6 +503,7 @@
       if (match) match.closest('details').open = true;
       welcome.hidden = Boolean(match);
       document.body.classList.toggle('home-view', !match);
+      document.body.classList.toggle('collection-view', category === '梦情' || inventoryCategories.includes(category));
       archiveContent.hidden = !archiveYears.includes(category);
       document.getElementById('dream-content').hidden = category !== '梦情';
       document.getElementById('inventory-content').hidden = !inventoryCategories.includes(category);
@@ -507,7 +518,7 @@
         loadArchive(category);
       } else if (match) {
         title.textContent = category;
-        description.textContent = inventoryCategories.includes(category) ? '以表格记录你的收藏，每件商品占一行。' : '这里可以添加分类 ' + category + ' 的内容。';
+        description.textContent = inventoryCategories.includes(category) ? '' : '这里可以添加分类 ' + category + ' 的内容。';
       } else {
         title.textContent = '我的购物记录';
         description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
@@ -888,7 +899,7 @@ function renderInventory(category) {
   const records = readInventory(category);
   if (!records.length) {
     const tr = document.createElement('tr'); const td = document.createElement('td');
-    td.colSpan = 13; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「添加记录」开始收藏。';
+    td.colSpan = 13; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「＋ 添加」开始收藏。';
     tr.appendChild(td); inventoryBody.appendChild(tr); return;
   }
   records.forEach(record => {
