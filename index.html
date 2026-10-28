@@ -201,7 +201,7 @@
     .home-quote-block { position: absolute; right: 3.5%; bottom: 8%; max-width: 94%; text-align: right; }
     .home-hero-quote { margin: 0; color: #191919; font-family: Garamond, 'EB Garamond', 'Adobe Garamond Pro', Georgia, serif; font-weight: 400; font-size: clamp(64px, 7.6vw, 128px); line-height: .99; letter-spacing: -.055em; }
     .home-hero-quote span { display: block; }
-    .home-hero-translation { margin: 25px 0 0; color: #999; font-family: 'STXinwei', '华文新魏', 'STKaiti', 'KaiTi', serif; font-size: clamp(13px, 1.2vw, 18px); font-weight: 400; letter-spacing: .14em; }
+    .home-hero-translation { margin: 25px 0 0; color: #999; font-family: 'STXinwei', '华文新魏', 'STKaiti', 'KaiTi', serif; font-size: clamp(13px, 1.2vw, 18px); font-weight: 400; font-style: italic; letter-spacing: .14em; }
     .home-hero-translation::before { content: ''; display: inline-block; width: 36px; margin-right: 20px; border-top: 1px solid #aaa; vertical-align: middle; }
     @keyframes homeFadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes homeFade { from { opacity: 0; } to { opacity: 1; } }
@@ -307,6 +307,9 @@
       color: #898989; font: 9px Optima, Arial, sans-serif; letter-spacing: .09em;
       text-align: center; cursor: pointer; overflow-wrap: anywhere; }
     .sidebar-coordinates:hover { color: #333; }
+    .sidebar-location { min-height: 18px; text-align: center; color: #777; font: 12px Optima, Arial, sans-serif; letter-spacing: .06em; margin: 2px 0 0; }
+    .sidebar-location:empty { display: none; }
+    .sidebar-coordinates { padding-bottom: 19px; font-size: 9px; }
     .sidebar nav { position: relative; z-index: 1; }
     .sidebar nav::before { content: '✦'; display: block; color: #777; font-size: 13px; text-align: right;
       padding: 0 5px 12px; border-top: 1px solid #dedede; margin: 10px 0 5px; }
@@ -328,7 +331,8 @@
       <h1>
   <a href="index.html">Ann’s Website</a>
 </h1>
-      <button type="button" class="sidebar-coordinates" id="sidebar-coordinates" title="点击授权后显示您当前所在位置的坐标">⌖  SHOW LOCAL COORDINATES</button>
+      <div class="sidebar-location" id="sidebar-location" aria-live="polite"></div>
+      <button type="button" class="sidebar-coordinates" id="sidebar-coordinates" title="点击后请求定位权限，并通过第三方地理编码服务识别城市">⌖  SHOW MY LOCATION</button>
       <nav aria-label="商品分类">
         <details>
           <summary>Gate of Babylon</summary>
@@ -963,22 +967,40 @@ function renderInventory(category) {
     setInterval(updateHomeClock, 1000);
 
 
-    // Coordinates are shown only after the visitor explicitly requests location access.
+    // Visitor-initiated location lookup. Coordinates are sent to a reverse-geocoding service
+    // only after the visitor clicks and grants the browser's location permission.
     const coordinateButton = document.getElementById('sidebar-coordinates');
-    if (coordinateButton) coordinateButton.addEventListener('click', () => {
+    const cityLabel = document.getElementById('sidebar-location');
+    if (coordinateButton) coordinateButton.addEventListener('click', async () => {
       if (!navigator.geolocation) {
         coordinateButton.textContent = 'LOCATION UNAVAILABLE';
         return;
       }
       coordinateButton.textContent = 'LOCATING…';
-      navigator.geolocation.getCurrentPosition(position => {
+      navigator.geolocation.getCurrentPosition(async position => {
         const {latitude, longitude} = position.coords;
         const lat = Math.abs(latitude).toFixed(4) + '° ' + (latitude >= 0 ? 'N' : 'S');
         const lon = Math.abs(longitude).toFixed(4) + '° ' + (longitude >= 0 ? 'E' : 'W');
         coordinateButton.textContent = lat + ' · ' + lon;
+        cityLabel.textContent = 'LOOKING UP CITY…';
+        try {
+          const url = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' +
+            encodeURIComponent(latitude) + '&longitude=' + encodeURIComponent(longitude) +
+            '&localityLanguage=en';
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('Geocoding failed');
+          const data = await response.json();
+          const city = data.city || data.locality || data.principalSubdivision || '';
+          const country = data.countryName || '';
+          cityLabel.textContent = [city, country].filter(Boolean).join(', ') || 'LOCATION UNKNOWN';
+        } catch (error) {
+          cityLabel.textContent = 'CITY UNAVAILABLE';
+          console.warn('Could not resolve city:', error);
+        }
       }, () => {
-        coordinateButton.textContent = '⌖  SHOW LOCAL COORDINATES';
-        coordinateButton.title = '无法获取坐标；请允许浏览器定位权限后重试';
+        coordinateButton.textContent = '⌖  SHOW MY LOCATION';
+        coordinateButton.title = '定位失败或未授权，点击重试';
+        cityLabel.textContent = '';
       }, {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000});
     });
     window.addEventListener('hashchange', updatePage);
