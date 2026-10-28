@@ -513,7 +513,23 @@
       <div id="archive-content" hidden>
   <div id="archive-list"></div>
 
-  <button id="add-archive-btn" type="button" >
+
+<div id="archive-auth" style="margin: 16px 0;">
+  <button id="archive-login" type="button">
+    使用 GitHub 登录以编辑
+  </button>
+
+  <button id="archive-logout" type="button" hidden>
+    退出编辑模式
+  </button>
+
+  <span id="archive-auth-status">
+    访客模式：仅浏览
+  </span>
+</div>
+
+        
+  <button id="add-archive-btn" type="button" hidden >
     + 添加旅行记录
   </button>
 
