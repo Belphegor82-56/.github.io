@@ -780,6 +780,7 @@
     inlineImageInput.value = '';
   }
   function openArchiveEditor(record = null) {
+    if (!archiveAuthenticated) return;
     editingArchiveId = record ? record.id : null;
     archiveTitleInput.value = record ? record.title : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
@@ -858,7 +859,11 @@
         renderArchive(year);
       });
       actions.append(editBtn, deleteBtn);
-      // Public travel diary is read-only; publishing is managed through /admin/.
+
+      // 只有登录的管理员才能看到编辑和删除按钮
+      actions.hidden = !archiveAuthenticated;
+
+      card.appendChild(actions);
       archiveList.appendChild(card);
     });
   }
