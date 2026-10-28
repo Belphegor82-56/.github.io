@@ -335,6 +335,25 @@
     }
     body.collection-view #page-title { font-size: clamp(25px, 2.2vw, 32px); }
     body.collection-view #page-description { display: none; }
+
+    /* 梦情卡片：心理价更清晰，操作按钮仅在右下角悬停时出现 */
+    #dream-list .dream-card { position: relative; padding-bottom: 66px; }
+    #dream-list .dream-card > .dream-note { font-size: 15px; line-height: 1.65; }
+    #dream-list .dream-card > .dream-actions {
+      position: absolute; right: 12px; bottom: 12px;
+      margin: 0; gap: 5px; flex-wrap: nowrap;
+      padding: 10px 0 0 12px;
+      opacity: 0; transition: opacity .18s ease;
+    }
+    #dream-list .dream-card > .dream-actions:hover,
+    #dream-list .dream-card > .dream-actions:focus-within { opacity: 1; }
+    #dream-list .dream-card > .dream-actions .dream-btn {
+      font-size: 11px; padding: 5px 7px; border-radius: 3px;
+      white-space: nowrap;
+    }
+    @media (hover: none), (pointer: coarse) {
+      #dream-list .dream-card > .dream-actions { opacity: 1; }
+    }
   </style>
 </head>
 <body>
