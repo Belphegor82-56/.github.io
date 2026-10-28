@@ -364,6 +364,31 @@
       #dream-list .dream-card > .dream-actions { opacity: 1; }
     }
 
+    /* 收藏表格：操作列保持 table-cell，避免 flex 破坏整行边框及行高 */
+    .inventory-table { table-layout: auto; }
+    .inventory-table td.inventory-actions {
+      display: table-cell;
+      vertical-align: middle;
+      width: 58px;
+      min-width: 58px;
+      padding: 8px 5px;
+      border-bottom: 1px solid #ededed;
+    }
+    .inventory-table .inventory-action-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 5px;
+    }
+    .inventory-table .inventory-action-stack .dream-btn {
+      font-size: 11px;
+      line-height: 1.2;
+      padding: 5px 7px;
+      min-width: 0;
+      width: 100%;
+      margin: 0;
+    }
+
     /* 梦情编辑表单：金额与币种同行，心理价与币种同行 */
     #dream-form .dream-price-layout { display: flex; flex-direction: column; gap: 14px; }
     #dream-form .dream-price-row { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) max-content; align-items: end; gap: 12px; min-width: 0; }
@@ -985,7 +1010,8 @@ function renderInventory(category) {
       if (!confirm('确定删除「'+(record.work || '此记录')+'」吗？')) return;
       if (saveInventory(category,readInventory(category).filter(item => item.id !== record.id))) { inventoryForm.hidden = true; renderInventory(category); }
     });
-    actions.append(edit,remove); tr.appendChild(actions); inventoryBody.appendChild(tr);
+    const actionStack = document.createElement('div'); actionStack.className = 'inventory-action-stack';
+    actionStack.append(edit,remove); actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
   });
 }
 
