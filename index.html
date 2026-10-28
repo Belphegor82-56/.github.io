@@ -585,6 +585,125 @@
     const archiveSaveBtn = document.getElementById('archive-save-btn');
     
     const inventoryCategories = ['卡带', '通贩', '中古'];
+    
+    // GitHub 登录：连接 Cloudflare Worker
+    const archiveApi =
+      'https://curly-wind-151eanns-website-api.ann657299.workers.dev';
+
+    const archiveLoginBtn =
+      document.getElementById('archive-login');
+    const archiveLogoutBtn =
+      document.getElementById('archive-logout');
+    const archiveAuthStatus =
+      document.getElementById('archive-auth-status');
+
+    let archiveSession =
+      sessionStorage.getItem('ann_archive_session') || '';
+    let archiveAuthenticated = false;
+
+    function updateArchiveLoginUI() {
+      archiveLoginBtn.hidden = archiveAuthenticated;
+      archiveLogoutBtn.hidden = !archiveAuthenticated;
+      addArchiveBtn.hidden = !archiveAuthenticated;
+
+      archiveAuthStatus.textContent = archiveAuthenticated
+        ? '已登录：可以编辑'
+        : '访客模式：仅浏览';
+
+      document.querySelectorAll('.archive-actions')
+        .forEach(el => {
+          el.hidden = !archiveAuthenticated;
+        });
+    }
+
+    archiveLoginBtn.addEventListener('click', () => {
+      window.location.href = archiveApi + '/login';
+    });
+
+    archiveLogoutBtn.addEventListener('click', async () => {
+      try {
+        await fetch(archiveApi + '/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + archiveSession
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      }
+
+      archiveSession = '';
+      archiveAuthenticated = false;
+      sessionStorage.removeItem('ann_archive_session');
+      updateArchiveLoginUI();
+    });
+
+    async function initializeArchiveLogin() {
+      const match =
+        /^#ann-login=([a-f0-9]{64})$/.exec(location.hash);
+
+      if (match) {
+        history.replaceState(
+          null,
+          '',
+          location.pathname + location.search + '#2026'
+        );
+
+        try {
+          const response = await fetch(archiveApi + '/exchange', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ticket: match[1]
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('登录凭证交换失败');
+          }
+
+          const data = await response.json();
+          archiveSession = data.session;
+          sessionStorage.setItem(
+            'ann_archive_session',
+            archiveSession
+          );
+        } catch (error) {
+          console.error(error);
+          alert('GitHub 登录失败，请重试。');
+        }
+      }
+
+      if (archiveSession) {
+        try {
+          const response = await fetch(archiveApi + '/me', {
+            headers: {
+              Authorization: 'Bearer ' + archiveSession
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            archiveAuthenticated =
+              data.authenticated === true;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (!archiveAuthenticated) {
+        archiveSession = '';
+        sessionStorage.removeItem('ann_archive_session');
+      }
+
+      updateArchiveLoginUI();
+    }
+
+    initializeArchiveLogin();
+
     const archiveYears = ['2026', '2025', '2024', '2023', '2022'];
     function updatePage() {
       const category = decodeURIComponent(location.hash.slice(1));
