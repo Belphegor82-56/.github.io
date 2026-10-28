@@ -672,7 +672,10 @@
       card.appendChild(heading);
       const body = document.createElement('div');
       body.className = 'archive-entry-body';
-      if (record.html) {
+      if (record.body) {
+        body.textContent = record.body;
+        body.style.whiteSpace = 'pre-wrap';
+      } else if (record.html) {
         // 只展示自己在本地编辑器中保存的内容，移除潜在的脚本与事件属性。
         const template = document.createElement('template');
         template.innerHTML = record.html;
@@ -693,7 +696,14 @@
         img.src = src;
         img.alt = record.title || '旅行照片';
         img.loading = 'lazy';
-        card.appendChild(img);
+        img.style.cursor = 'zoom-in';
+        const link = document.createElement('a');
+        link.href = src;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = '打开原图，可在新页面保存';
+        link.appendChild(img);
+        card.appendChild(link);
       });
       const actions = document.createElement('div');
       actions.className = 'archive-actions';
@@ -713,7 +723,7 @@
         renderArchive(year);
       });
       actions.append(editBtn, deleteBtn);
-      card.appendChild(actions);
+      // Public travel diary is read-only; publishing is managed through /admin/.
       archiveList.appendChild(card);
     });
   }
@@ -721,24 +731,13 @@
     activeArchiveYear = year;
     closeArchiveEditor();
     const sequence = ++archiveLoadSequence;
-    const stored = readStoredArchive(year);
-    if (stored !== null) {
-      archiveRecords = stored.map(normalizeArchive);
-      renderArchive(year);
-      return;
-    }
-    if (year === '2026') {
-      archiveRecords = [];
-      renderArchive(year);
-      return;
-    }
     archiveList.textContent = '正在加载旅行记录...';
     try {
-      const response = await fetch('data/archive-' + year + '.json');
+      const response = await fetch('data/public-archive-' + year + '.json', { cache: 'no-store' });
       if (!response.ok) throw new Error('无法读取旅行数据');
       const data = await response.json();
       if (sequence !== archiveLoadSequence) return;
-      archiveRecords = (Array.isArray(data) ? data : []).map(normalizeArchive);
+      archiveRecords = (Array.isArray(data.entries) ? data.entries : []).map(normalizeArchive);
     } catch (error) {
       if (sequence !== archiveLoadSequence) return;
       console.info('未找到旅行记录文件，将使用空白记录', error);
