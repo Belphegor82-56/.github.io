@@ -898,24 +898,63 @@
       archiveList.appendChild(card);
     });
   }
+ 
   async function loadArchive(year = '2026') {
     activeArchiveYear = year;
     closeArchiveEditor();
+
     const sequence = ++archiveLoadSequence;
     archiveList.textContent = '正在加载旅行记录...';
+
     try {
-      const response = await fetch('data/public-archive-' + year + '.json', { cache: 'no-store' });
-      if (!response.ok) throw new Error('无法读取旅行数据');
-      const data = await response.json();
+      // 优先读取新版公开日记
+      let response = await fetch(
+        'data/public-archive-' + year + '.json',
+        { cache: 'no-store' }
+      );
+
+      let records;
+
+      if (response.ok) {
+        const data = await response.json();
+        records = Array.isArray(data.entries)
+          ? data.entries
+          : [];
+      } else if (response.status === 404) {
+        // 新版文件不存在时，读取原来的旧日记
+        response = await fetch(
+          'data/archive-' + year + '.json',
+          { cache: 'no-store' }
+        );
+
+        if (!response.ok) {
+          if (response.status !== 404) {
+            throw new Error('读取旧日记失败');
+          }
+          records = [];
+        } else {
+          const data = await response.json();
+          records = Array.isArray(data) ? data : [];
+        }
+      } else {
+        throw new Error('读取公开日记失败');
+      }
+
       if (sequence !== archiveLoadSequence) return;
-      archiveRecords = (Array.isArray(data.entries) ? data.entries : []).map(normalizeArchive);
+
+      archiveRecords = records.map(normalizeArchive);
     } catch (error) {
       if (sequence !== archiveLoadSequence) return;
-      console.info('未找到旅行记录文件，将使用空白记录', error);
-      archiveRecords = [];
+
+      console.error('读取旅行记录失败', error);
+      archiveList.textContent =
+        '旅行记录暂时无法加载，请稍后刷新页面。';
+      return;
     }
+
     renderArchive(year);
   }
+
   
   // 向 Cloudflare Worker 发送经过身份验证的请求
   async function archiveRequest(path, options = {}) {
