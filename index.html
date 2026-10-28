@@ -558,7 +558,7 @@
 
     <input id="archive-images" type="file" accept="image/*" multiple>
 
-    <button id="archive-save-btn" type="button">保存</button>
+    <button id="archive-save-btn" type="button">保存并发布</button>
     <button id="archive-cancel-btn" type="button">取消</button>
   </div>
 </div>
@@ -885,23 +885,96 @@
     }
     renderArchive(year);
   }
-  function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
+  
+  // 向 Cloudflare Worker 发送经过身份验证的请求
+  async function archiveRequest(path, options = {}) {
+    if (!archiveAuthenticated || !archiveSession) {
+      throw new Error('请先登录 GitHub');
+    }
+
+    const response = await fetch(archiveApi + path, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: 'Bearer ' + archiveSession
+      }
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || '请求失败');
+    }
+
+    return data;
   }
+
+  // 上传单张照片到 GitHub
+  async function uploadArchiveImage(file) {
+    if (file.size > 4 * 1024 * 1024) {
+      throw new Error(
+        '照片超过 4 MB，请先压缩：' + file.name
+      );
+    }
+
+    const result = await archiveRequest('/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type
+      },
+      body: file
+    });
+
+    return result.path;
+  }
+
+  // 上传插入在日记正文中的照片
   async function persistInlineImages() {
     const imgs = [...richEditor.querySelectorAll('img')];
+
     for (const img of imgs) {
-      if (!img.src.startsWith('blob:')) continue;
-      const response = await fetch(img.src);
+      const src = img.getAttribute('src') || '';
+
+      if (
+        !src.startsWith('blob:') &&
+        !src.startsWith('data:image/')
+      ) {
+        continue;
+      }
+
+      const response = await fetch(src);
       const blob = await response.blob();
-      img.src = await readFileAsDataURL(blob);
+
+      const type = blob.type || 'image/png';
+      const file = new File(
+        [blob],
+        'inline-image',
+        { type }
+      );
+
+      const path = await uploadArchiveImage(file);
+      img.setAttribute('src', path);
+
+      if (src.startsWith('blob:')) {
+        URL.revokeObjectURL(src);
+      }
     }
   }
+
+  // 将某一年的旅行记录发布到 GitHub
+  async function publishArchive(year, records) {
+    return archiveRequest('/publish', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        year,
+        entries: records
+      })
+    });
+  }
+
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
     italicBtn.addEventListener('click', () => {formatText('italic');});
@@ -971,7 +1044,77 @@ inlineImageInput.addEventListener('change', () => {
     
 addArchiveBtn.addEventListener('click', () => openArchiveEditor());
 archiveCancelBtn.addEventListener('click', closeArchiveEditor);
+
 archiveSaveBtn.addEventListener('click', async () => {
+  if (!archiveAuthenticated) {
+    alert('请先使用 GitHub 登录');
+    return;
+  }
+
+  const year = activeArchiveYear;
+  if (!year) return;
+
+  const title = archiveTitleInput.value.trim();
+  if (!title) {
+    alert('请先填写旅行标题');
+    return;
+  }
+
+  archiveSaveBtn.disabled = true;
+  archiveSaveBtn.textContent = '正在上传并发布...';
+
+  try {
+    // 上传正文中插入的图片
+    await persistInlineImages();
+
+    // 上传底部选择的多张图片
+    const images = [];
+
+    for (const file of archiveImagesInput.files) {
+      const path = await uploadArchiveImage(file);
+      images.push(path);
+    }
+
+    const old = archiveRecords.find(
+      item => item.id === editingArchiveId
+    );
+
+    const record = {
+      id: old ? old.id : archiveId(),
+      title,
+      description: richEditor.innerText,
+      html: richEditor.innerHTML,
+      images: [
+        ...(old ? old.images : []),
+        ...images
+      ]
+    };
+
+    const next = old
+      ? archiveRecords.map(
+          item => item.id === old.id ? record : item
+        )
+      : [...archiveRecords, record];
+
+    // 真正发布到 GitHub
+    await publishArchive(year, next);
+
+    archiveRecords = next;
+    closeArchiveEditor();
+    renderArchive(year);
+
+    alert(
+      '发布成功！GitHub Pages 可能需要几分钟更新。'
+    );
+  } catch (error) {
+    console.error(error);
+    alert('发布失败：' + error.message);
+  } finally {
+    archiveSaveBtn.disabled = false;
+    archiveSaveBtn.textContent = '保存并发布';
+  }
+});
+
   const year = activeArchiveYear;
   if (!year) return;
   archiveSaveBtn.disabled = true;
