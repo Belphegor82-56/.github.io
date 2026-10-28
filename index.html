@@ -598,7 +598,12 @@
     }
   let archiveRecords = [];
   let editingIndex = null;
-  async function loadArchive(year = '2026') { archiveList.textContent = '正在加载旅行记录...';
+  async function loadArchive(year = '2026') {
+  if (year === '2026') {
+    archiveList.textContent = '2026 年还没有旅行记录。';
+    return;
+  }
+  archiveList.textContent = '正在加载旅行记录...';
   try { const response = await fetch('data/archive-' + year + '.json');
     if (!response.ok) {throw new Error('无法读取旅行数据');}
     const records = await response.json();
