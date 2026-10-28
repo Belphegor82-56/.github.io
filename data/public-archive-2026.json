@@ -1,15 +1,4 @@
-
 {
   "year": "2026",
-  "entries": [
-    {
-      "id": "tokyo-trip-2026",
-      "title": "东京旅行",
-      "description": "2026年在东京的旅行记录。",
-      "html": "<p>2026年在东京的旅行记录。</p>",
-      "images": [
-        "images/uploads/tokyo.jpg"
-      ]
-    }
-  ]
+  "entries": []
 }
