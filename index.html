@@ -309,6 +309,8 @@
 
     .sidebar-location { min-height: 18px; text-align: center; color: #777; font: 12px Optima, Arial, sans-serif; letter-spacing: .06em; margin: 2px 0 0; }
     .sidebar-location:empty { display: none; }
+    .sidebar-location-refresh { display:block; margin: 2px auto 0; padding: 2px 4px; border:0; background:transparent; color:#999; font: 9px Optima,Arial,sans-serif; letter-spacing:.08em; cursor:pointer; }
+    .sidebar-location-refresh:hover { color:#333; }
     .sidebar-coordinates { padding-bottom: 19px; font-size: 9px; }
     .sidebar nav { position: relative; z-index: 1; }
     .sidebar nav::before { content: '✦'; display: block; color: #777; font-size: 13px; text-align: right;
@@ -332,6 +334,7 @@
   <a href="index.html">Ann’s Website</a>
 </h1>
       <div class="sidebar-location" id="sidebar-location" aria-live="polite"></div>
+      <button type="button" id="sidebar-location-refresh" class="sidebar-location-refresh" title="重新获取准确位置" aria-label="重新获取准确位置">↻ Update location</button>
       <div class="sidebar-coordinates" id="sidebar-coordinates" aria-live="polite">LOCATING…</div>
       <nav aria-label="商品分类">
         <details>
@@ -967,38 +970,93 @@ function renderInventory(category) {
     setInterval(updateHomeClock, 1000);
 
 
-    // Approximate city and coordinates based on the visitor's public IP.
-    // No browser location permission is requested. The lookup provider receives the IP.
+    // Accurate location: browser geolocation with consent; never silently fall back to IP location.
+    // Last successful result is cached locally, and marked as saved rather than current.
     const coordinateLabel = document.getElementById('sidebar-coordinates');
     const cityLabel = document.getElementById('sidebar-location');
-    async function updateVisitorLocation() {
-      if (!coordinateLabel || !cityLabel) return;
-      cityLabel.textContent = 'LOCATING…';
-      coordinateLabel.textContent = '';
-      try {
-        const response = await fetch('https://ipwho.is/?lang=en', {
-          headers: { 'Accept': 'application/json' }
-        });
-        if (!response.ok) throw new Error('IP location request failed');
-        const data = await response.json();
-        if (data.success === false) throw new Error('IP location not available');
-        const city = data.city || data.region || '';
-        const country = data.country || '';
-        cityLabel.textContent = [city, country].filter(Boolean).join(', ') || 'Somewhere on Earth';
-        const latitude = Number(data.latitude);
-        const longitude = Number(data.longitude);
-        if (Number.isFinite(latitude) && Number.isFinite(longitude) &&
-            data.latitude != null && data.longitude != null) {
-          const lat = Math.abs(latitude).toFixed(4) + '° ' + (latitude >= 0 ? 'N' : 'S');
-          const lon = Math.abs(longitude).toFixed(4) + '° ' + (longitude >= 0 ? 'E' : 'W');
-          coordinateLabel.textContent = lat + ' · ' + lon;
-        }
-      } catch (error) {
-        cityLabel.textContent = 'Somewhere on Earth';
-        coordinateLabel.textContent = '';
-        console.warn('IP-based location unavailable:', error);
-      }
+    const locationCacheKey = 'anns-website-visitor-precise-location-v1';
+    const locationButton = document.getElementById('sidebar-location-refresh');
+    function formatCoordinates(latitude, longitude) {
+      return Math.abs(latitude).toFixed(4) + '° ' + (latitude >= 0 ? 'N' : 'S') +
+        ' · ' + Math.abs(longitude).toFixed(4) + '° ' + (longitude >= 0 ? 'E' : 'W');
     }
+    function showLocationResult(data, saved = false) {
+      if (!cityLabel || !coordinateLabel) return;
+      cityLabel.textContent = (data.city || 'City unavailable') + (saved ? ' · saved' : '');
+      coordinateLabel.textContent = formatCoordinates(data.latitude, data.longitude);
+      cityLabel.title = saved ? '上次授权定位的结果，点击刷新图标更新' : '浏览器授权定位结果';
+    }
+    function readCachedLocation() {
+      try {
+        const data = JSON.parse(localStorage.getItem(locationCacheKey) || 'null');
+        return data && Number.isFinite(data.latitude) && Number.isFinite(data.longitude) ? data : null;
+      } catch (_) { return null; }
+    }
+    const cachedLocation = readCachedLocation();
+    if (cachedLocation) showLocationResult(cachedLocation, true);
+    else if (cityLabel) cityLabel.textContent = 'Location not set';
+    if (coordinateLabel && !cachedLocation) coordinateLabel.textContent = '';
+    async function reverseGeocode(latitude, longitude) {
+      // OpenStreetMap Nominatim: coordinates are shared only after geolocation consent.
+      const url = new URL('https://nominatim.openstreetmap.org/reverse');
+      url.searchParams.set('format', 'jsonv2');
+      url.searchParams.set('lat', String(latitude));
+      url.searchParams.set('lon', String(longitude));
+      url.searchParams.set('zoom', '10');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('accept-language', 'en');
+      const response = await fetch(url.toString(), {headers: {'Accept': 'application/json'}});
+      if (!response.ok) throw new Error('Reverse geocoding unavailable');
+      const result = await response.json();
+      const address = result.address || {};
+      const city = address.city || address.town || address.village || address.municipality ||
+        address.county || address.state || '';
+      const country = address.country || '';
+      return [city, country].filter(Boolean).join(', ');
+    }
+    let locating = false;
+    function updateVisitorLocation() {
+      if (!cityLabel || !coordinateLabel || locating) return;
+      if (!navigator.geolocation) {
+        if (!cachedLocation) cityLabel.textContent = 'Location unavailable';
+        return;
+      }
+      locating = true;
+      if (locationButton) locationButton.disabled = true;
+      if (!readCachedLocation()) cityLabel.textContent = 'Waiting for permission…';
+      navigator.geolocation.getCurrentPosition(async position => {
+        const {latitude, longitude, accuracy} = position.coords;
+        // A very broad position can be misleading at the city level.
+        if (accuracy > 20000) {
+          cityLabel.textContent = 'Location not precise enough';
+          coordinateLabel.textContent = 'Please check device location settings';
+          locating = false;
+          if (locationButton) locationButton.disabled = false;
+          return;
+        }
+        const data = {latitude, longitude, city: 'Finding city…', savedAt: Date.now()};
+        showLocationResult(data);
+        try {
+          data.city = await reverseGeocode(latitude, longitude) || 'City unavailable';
+        } catch (error) {
+          data.city = 'City unavailable';
+          console.warn('City lookup unavailable:', error);
+        }
+        showLocationResult(data);
+        try { localStorage.setItem(locationCacheKey, JSON.stringify(data)); } catch (_) {}
+        locating = false;
+        if (locationButton) locationButton.disabled = false;
+      }, error => {
+        if (!readCachedLocation()) {
+          cityLabel.textContent = error.code === 1 ? 'Location permission needed' : 'Location unavailable';
+          coordinateLabel.textContent = '';
+        }
+        locating = false;
+        if (locationButton) locationButton.disabled = false;
+      }, {enableHighAccuracy: true, timeout: 15000, maximumAge: 0});
+    }
+    if (locationButton) locationButton.addEventListener('click', updateVisitorLocation);
+    // Ask on first load. Permission prompts are controlled by the browser.
     updateVisitorLocation();
     window.addEventListener('hashchange', updatePage);
     updatePage();
