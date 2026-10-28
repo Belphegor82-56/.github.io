@@ -363,6 +363,22 @@
     @media (hover: none), (pointer: coarse) {
       #dream-list .dream-card > .dream-actions { opacity: 1; }
     }
+
+    /* 梦情编辑表单：金额与币种同行，心理价与币种同行 */
+    #dream-form .dream-price-layout { display: flex; flex-direction: column; gap: 14px; }
+    #dream-form .dream-price-row { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) max-content; align-items: end; gap: 12px; min-width: 0; }
+    #dream-form .dream-price-field { min-width: 0; }
+    #dream-form .dream-price-field label { display: block; margin: 0 0 6px; white-space: nowrap; }
+    #dream-form .dream-status-field { flex: 1.05 1 0; }
+    #dream-form .dream-amount-field { flex: 1 1 0; }
+    #dream-form .dream-target-field { grid-column: 2; min-width: 0; }
+    #dream-form .dream-currency-field { grid-column: 3; }
+    #dream-form .dream-currency-field select { width: auto; min-width: 0; max-width: 100%; padding-right: 28px; }
+    @media (max-width: 520px) {
+      #dream-form .dream-price-row { gap: 8px; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) max-content; }
+      #dream-form .dream-price-field input, #dream-form .dream-price-field select { font-size: 13px; padding: 9px 6px; }
+      #dream-form .dream-currency-field select { padding-right: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -449,12 +465,16 @@
           <label for="dream-image">上传图片（单张，自动压缩后保存在本浏览器）</label>
           <input id="dream-image" type="file" accept="image/*">
           <img id="dream-preview" alt="所选图片预览" hidden style="max-width:220px;max-height:220px;object-fit:contain;margin-top:12px;border-radius:9px;">
-          <div class="dream-fields" style="margin-top:16px;">
-            <div><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
-            <div><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
-            <div><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
-            <div><label for="dream-target-price">心理价（可填写范围，例如 300-400）</label><input id="dream-target-price" type="text" maxlength="100" placeholder="例如 300-400"></div>
-            <div><label for="dream-target-currency">心理价币种</label><select id="dream-target-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+          <div class="dream-price-layout" style="margin-top:16px;">
+            <div class="dream-price-row">
+              <div class="dream-price-field dream-status-field"><label for="dream-status">收货状态</label><select id="dream-status"><option value="未收到">未收到</option><option value="收到">收到</option></select></div>
+              <div class="dream-price-field dream-amount-field"><label for="dream-amount">金额</label><input id="dream-amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="dream-price-field dream-currency-field"><label for="dream-currency">币种</label><select id="dream-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+            </div>
+            <div class="dream-price-row">
+              <div class="dream-price-field dream-target-field"><label for="dream-target-price">心理价</label><input id="dream-target-price" type="text" maxlength="100" placeholder="例如 300-400"></div>
+              <div class="dream-price-field dream-currency-field"><label for="dream-target-currency">币种</label><select id="dream-target-currency"><option value="JPY">日元 (JPY)</option><option value="CNY">人民币 (CNY)</option></select></div>
+            </div>
           </div>
           <div class="dream-actions">
             <button class="dream-btn" type="submit">保存到本浏览器</button>
@@ -577,7 +597,7 @@
       // 编辑按钮
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.textContent = '编辑';
+      editBtn.textContent = '✏️ 编辑';
 
       
     editBtn.addEventListener('click', () => {
@@ -600,7 +620,7 @@
       // 删除按钮
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
-      deleteBtn.textContent = '删除';
+      deleteBtn.textContent = '🗑️ 删除';
 
       // 把按钮放进容器
       actions.appendChild(editBtn);
@@ -826,8 +846,8 @@ function renderDreamCards() {
       card.appendChild(target);
     }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
-    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '编辑'; edit.addEventListener('click', () => openDreamForm(record));
-    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '删除';
+    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
+    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
     remove.addEventListener('click', () => {
       if (!confirm('确定删除「' + record.name + '」吗？此操作会删除当前浏览器中的记录。')) return;
       const next = readDreamRecords().filter(item => item.id !== record.id);
