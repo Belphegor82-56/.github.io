@@ -577,7 +577,7 @@
       // 编辑按钮
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.textContent = '✏️ 编辑';
+      editBtn.textContent = '编辑';
 
       
     editBtn.addEventListener('click', () => {
@@ -600,7 +600,7 @@
       // 删除按钮
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
-      deleteBtn.textContent = '🗑️ 删除';
+      deleteBtn.textContent = '删除';
 
       // 把按钮放进容器
       actions.appendChild(editBtn);
@@ -826,8 +826,8 @@ function renderDreamCards() {
       card.appendChild(target);
     }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
-    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
-    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
+    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '编辑'; edit.addEventListener('click', () => openDreamForm(record));
+    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '删除';
     remove.addEventListener('click', () => {
       if (!confirm('确定删除「' + record.name + '」吗？此操作会删除当前浏览器中的记录。')) return;
       const next = readDreamRecords().filter(item => item.id !== record.id);
