@@ -850,14 +850,45 @@
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.textContent = '删除';
-      deleteBtn.addEventListener('click', () => {
-        if (!confirm('确定删除这条旅行记录吗？')) return;
-        const next = archiveRecords.filter(item => item.id !== record.id);
-        if (!persistArchive(year, next)) return;
-        archiveRecords = next;
-        if (editingArchiveId === record.id) closeArchiveEditor();
-        renderArchive(year);
+     
+      deleteBtn.addEventListener('click', async () => {
+        if (!archiveAuthenticated) {
+          alert('请先使用 GitHub 登录');
+          return;
+        }
+
+        if (!confirm('确定删除这条旅行记录并发布到 GitHub 吗？')) {
+          return;
+        }
+
+        const next = archiveRecords.filter(
+          item => item.id !== record.id
+        );
+
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = '正在删除...';
+
+        try {
+          await publishArchive(year, next);
+
+          archiveRecords = next;
+
+          if (editingArchiveId === record.id) {
+            closeArchiveEditor();
+          }
+
+          renderArchive(year);
+
+          alert('旅行记录已从 GitHub 删除。');
+        } catch (error) {
+          console.error(error);
+          alert('删除失败：' + error.message);
+
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = '删除';
+        }
       });
+
       actions.append(editBtn, deleteBtn);
 
       // 只有登录的管理员才能看到编辑和删除按钮
