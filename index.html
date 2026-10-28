@@ -454,7 +454,6 @@
       </section>
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
-        <p class="dream-note">记录保存在当前浏览器中，不会自动同步到 GitHub 或其他设备。请定期备份重要内容。</p>
         <div class="dream-toolbar"><button id="dream-add" class="dream-btn" type="button">＋ 添加</button></div>
         <form id="dream-form" class="dream-form" hidden>
           <h3 id="dream-form-heading">新增收藏记录</h3>
@@ -477,7 +476,7 @@
             </div>
           </div>
           <div class="dream-actions">
-            <button class="dream-btn" type="submit">保存到本浏览器</button>
+            <button class="dream-btn" type="submit">保存</button>
             <button id="dream-cancel" class="dream-btn" type="button">取消</button>
           </div>
         </form>
@@ -846,8 +845,8 @@ function renderDreamCards() {
       card.appendChild(target);
     }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
-    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '✏️ 编辑'; edit.addEventListener('click', () => openDreamForm(record));
-    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '🗑️ 删除';
+    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '编辑'; edit.addEventListener('click', () => openDreamForm(record));
+    const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '删除';
     remove.addEventListener('click', () => {
       if (!confirm('确定删除「' + record.name + '」吗？此操作会删除当前浏览器中的记录。')) return;
       const next = readDreamRecords().filter(item => item.id !== record.id);
