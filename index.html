@@ -337,12 +337,21 @@
     body.collection-view #page-description { display: none; }
 
     /* 梦情卡片：心理价更清晰，操作按钮仅在右下角悬停时出现 */
-    #dream-list .dream-card { position: relative; padding-bottom: 66px; }
+    #dream-list .dream-card {
+      position: relative;
+      background: #f4f4f4;
+      border: 1px solid #ebebeb;
+      border-radius: 16px;
+      padding: 14px 14px 38px;
+      overflow: hidden;
+    }
+    #dream-list .dream-card > img { margin-bottom: 12px; }
+    #dream-list .dream-card > .dream-note { margin-bottom: 0; }
     #dream-list .dream-card > .dream-note { font-size: 15px; line-height: 1.65; }
     #dream-list .dream-card > .dream-actions {
-      position: absolute; right: 12px; bottom: 12px;
+      position: absolute; right: 10px; bottom: 8px;
       margin: 0; gap: 5px; flex-wrap: nowrap;
-      padding: 10px 0 0 12px;
+      padding: 7px 0 0 10px;
       opacity: 0; transition: opacity .18s ease;
     }
     #dream-list .dream-card > .dream-actions:hover,
