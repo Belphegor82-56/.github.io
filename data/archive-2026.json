@@ -1,1 +1,10 @@
-[]
+
+[
+  {
+    "title": "东京旅行",
+    "description": "2026年在东京的旅行记录。",
+    "images": [
+      "images/uploads/tokyo.jpg"
+    ]
+  }
+]
