@@ -513,7 +513,13 @@
       <div id="archive-content" hidden>
   <div id="archive-list"></div>
 
-  <button id="add-archive-btn" type="button" >
+  <div id="archive-auth" style="margin:16px 0">
+    <button id="archive-login" type="button">使用 GitHub 登录以编辑</button>
+    <button id="archive-logout" type="button" hidden>退出编辑模式</button>
+    <span id="archive-auth-status">访客模式：仅浏览</span>
+  </div>
+
+  <button id="add-archive-btn" type="button" hidden>
     + 添加旅行记录
   </button>
 
@@ -542,7 +548,7 @@
 
     <input id="archive-images" type="file" accept="image/*" multiple>
 
-    <button id="archive-save-btn" type="button">保存</button>
+    <button id="archive-save-btn" type="button">保存并发布</button>
     <button id="archive-cancel-btn" type="button">取消</button>
   </div>
 </div>
@@ -569,6 +575,78 @@
     const archiveSaveBtn = document.getElementById('archive-save-btn');
     
     const inventoryCategories = ['卡带', '通贩', '中古'];
+
+    // Only the five travel archive pages use GitHub publishing.
+    const archiveApi = 'https://curly-wind-151eanns-website-api.ann657299.workers.dev';
+    const archiveLoginBtn = document.getElementById('archive-login');
+    const archiveLogoutBtn = document.getElementById('archive-logout');
+    const archiveAuthStatus = document.getElementById('archive-auth-status');
+    let archiveSession = sessionStorage.getItem('ann_archive_session') || '';
+    let archiveAuthenticated = false;
+    function updateArchiveLoginUI() {
+      archiveLoginBtn.hidden = archiveAuthenticated;
+      archiveLogoutBtn.hidden = !archiveAuthenticated;
+      addArchiveBtn.hidden = !archiveAuthenticated;
+      archiveAuthStatus.textContent = archiveAuthenticated ? '已登录：可以编辑' : '访客模式：仅浏览';
+      document.querySelectorAll('.archive-actions').forEach(el => {
+        el.hidden = !archiveAuthenticated;
+      });
+      if (!archiveAuthenticated) archiveEditor.hidden = true;
+    }
+    archiveLoginBtn.addEventListener('click', () => {
+      location.href = archiveApi + '/login';
+    });
+    archiveLogoutBtn.addEventListener('click', async () => {
+      try {
+        await fetch(archiveApi + '/logout', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + archiveSession }
+        });
+      } catch (error) { console.error(error); }
+      archiveSession = '';
+      archiveAuthenticated = false;
+      sessionStorage.removeItem('ann_archive_session');
+      updateArchiveLoginUI();
+    });
+    async function initializeArchiveLogin() {
+      const ticketMatch = /^#ann-login=([a-f0-9]{64})$/.exec(location.hash);
+      if (ticketMatch) {
+        history.replaceState(null, '', location.pathname + location.search + '#2026');
+        try {
+          const response = await fetch(archiveApi + '/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticket: ticketMatch[1] })
+          });
+          if (!response.ok) throw new Error('GitHub 登录交换失败');
+          const data = await response.json();
+          archiveSession = data.session;
+          sessionStorage.setItem('ann_archive_session', archiveSession);
+        } catch (error) {
+          console.error(error);
+          alert('GitHub 登录失败，请重试。');
+        }
+      }
+      if (archiveSession) {
+        try {
+          const response = await fetch(archiveApi + '/me', {
+            headers: { Authorization: 'Bearer ' + archiveSession }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            archiveAuthenticated = data.authenticated === true;
+          }
+        } catch (error) { console.error(error); }
+      }
+      if (!archiveAuthenticated) {
+        archiveSession = '';
+        sessionStorage.removeItem('ann_archive_session');
+      }
+      updateArchiveLoginUI();
+      if (ticketMatch) updatePage();
+    }
+    initializeArchiveLogin();
+
     const archiveYears = ['2026', '2025', '2024', '2023', '2022'];
     function updatePage() {
       const category = decodeURIComponent(location.hash.slice(1));
@@ -645,6 +723,7 @@
     inlineImageInput.value = '';
   }
   function openArchiveEditor(record = null) {
+    if (!archiveAuthenticated) return;
     editingArchiveId = record ? record.id : null;
     archiveTitleInput.value = record ? record.title : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
@@ -714,16 +793,24 @@
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.textContent = '删除';
-      deleteBtn.addEventListener('click', () => {
-        if (!confirm('确定删除这条旅行记录吗？')) return;
+      deleteBtn.addEventListener('click', async () => {
+        if (!archiveAuthenticated) return;
+        if (!confirm('确定删除这条旅行记录并发布吗？')) return;
         const next = archiveRecords.filter(item => item.id !== record.id);
-        if (!persistArchive(year, next)) return;
-        archiveRecords = next;
-        if (editingArchiveId === record.id) closeArchiveEditor();
-        renderArchive(year);
+        deleteBtn.disabled = true;
+        try {
+          await publishArchive(year, next);
+          archiveRecords = next;
+          if (editingArchiveId === record.id) closeArchiveEditor();
+          renderArchive(year);
+        } catch (error) {
+          alert('删除失败：' + error.message);
+          deleteBtn.disabled = false;
+        }
       });
       actions.append(editBtn, deleteBtn);
-      // Public travel diary is read-only; publishing is managed through /admin/.
+      actions.hidden = !archiveAuthenticated;
+      card.appendChild(actions);
       archiveList.appendChild(card);
     });
   }
@@ -733,34 +820,70 @@
     const sequence = ++archiveLoadSequence;
     archiveList.textContent = '正在加载旅行记录...';
     try {
-      const response = await fetch('data/public-archive-' + year + '.json', { cache: 'no-store' });
-      if (!response.ok) throw new Error('无法读取旅行数据');
-      const data = await response.json();
+      let response = await fetch('data/public-archive-' + year + '.json', { cache: 'no-store' });
+      let records = [];
+      if (response.ok) {
+        const data = await response.json();
+        records = Array.isArray(data) ? data : (Array.isArray(data.entries) ? data.entries : []);
+      } else if (response.status === 404) {
+        response = await fetch('data/archive-' + year + '.json', { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          records = Array.isArray(data) ? data : (Array.isArray(data.entries) ? data.entries : []);
+        } else if (response.status !== 404) {
+          throw new Error('旅行记录读取失败');
+        }
+      } else {
+        throw new Error('旅行记录读取失败');
+      }
       if (sequence !== archiveLoadSequence) return;
-      archiveRecords = (Array.isArray(data.entries) ? data.entries : []).map(normalizeArchive);
+      archiveRecords = records.map(normalizeArchive);
+      renderArchive(year);
     } catch (error) {
       if (sequence !== archiveLoadSequence) return;
-      console.info('未找到旅行记录文件，将使用空白记录', error);
-      archiveRecords = [];
+      console.error(error);
+      archiveList.textContent = '旅行记录暂时无法加载，请刷新页面重试。';
     }
-    renderArchive(year);
   }
-  function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
+  async function archiveRequest(path, options = {}) {
+    if (!archiveAuthenticated || !archiveSession) throw new Error('请先登录 GitHub');
+    const response = await fetch(archiveApi + path, {
+      ...options,
+      headers: { ...(options.headers || {}), Authorization: 'Bearer ' + archiveSession }
     });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'GitHub 请求失败');
+    return data;
+  }
+  async function uploadArchiveImage(file) {
+    if (file.size > 4 * 1024 * 1024) throw new Error('图片不能超过 4 MB：' + file.name);
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      throw new Error('仅支持 JPG、PNG、WebP 或 GIF 图片：' + file.name);
+    }
+    const data = await archiveRequest('/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+    return data.path;
   }
   async function persistInlineImages() {
-    const imgs = [...richEditor.querySelectorAll('img')];
-    for (const img of imgs) {
-      if (!img.src.startsWith('blob:')) continue;
-      const response = await fetch(img.src);
-      const blob = await response.blob();
-      img.src = await readFileAsDataURL(blob);
+    for (const img of [...richEditor.querySelectorAll('img')]) {
+      const src = img.getAttribute('src') || '';
+      if (!src.startsWith('blob:') && !src.startsWith('data:image/')) continue;
+      const blob = await (await fetch(src)).blob();
+      const file = new File([blob], 'inline-image', { type: blob.type || 'image/png' });
+      const path = await uploadArchiveImage(file);
+      img.setAttribute('src', path);
+      if (src.startsWith('blob:')) URL.revokeObjectURL(src);
     }
+  }
+  async function publishArchive(year, entries) {
+    return archiveRequest('/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year, entries })
+    });
   }
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
@@ -832,30 +955,39 @@ inlineImageInput.addEventListener('change', () => {
 addArchiveBtn.addEventListener('click', () => openArchiveEditor());
 archiveCancelBtn.addEventListener('click', closeArchiveEditor);
 archiveSaveBtn.addEventListener('click', async () => {
+  if (!archiveAuthenticated) return;
   const year = activeArchiveYear;
-  if (!year) return;
+  if (!archiveYears.includes(year)) return;
+  const titleText = archiveTitleInput.value.trim();
+  if (!titleText) { alert('请先填写旅行标题'); return; }
   archiveSaveBtn.disabled = true;
+  archiveSaveBtn.textContent = '正在上传并发布...';
   try {
     await persistInlineImages();
-    const images = await Promise.all([...archiveImagesInput.files].map(readFileAsDataURL));
+    const images = [];
+    for (const file of archiveImagesInput.files) images.push(await uploadArchiveImage(file));
     const old = archiveRecords.find(item => item.id === editingArchiveId);
     const record = {
       id: old ? old.id : archiveId(),
-      title: archiveTitleInput.value.trim(),
+      title: titleText,
       description: richEditor.innerText,
       html: richEditor.innerHTML,
       images: [...(old ? old.images : []), ...images]
     };
-    const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
-    if (!persistArchive(year, next)) return;
+    const next = old
+      ? archiveRecords.map(item => item.id === old.id ? record : item)
+      : [...archiveRecords, record];
+    await publishArchive(year, next);
     archiveRecords = next;
     closeArchiveEditor();
     renderArchive(year);
+    alert('旅行日记已发布。');
   } catch (error) {
     console.error(error);
-    alert('保存失败，请检查所选图片后重试。');
+    alert('发布失败：' + error.message);
   } finally {
     archiveSaveBtn.disabled = false;
+    archiveSaveBtn.textContent = '保存并发布';
   }
 });
 
