@@ -513,23 +513,7 @@
       <div id="archive-content" hidden>
   <div id="archive-list"></div>
 
-
-<div id="archive-auth" style="margin: 16px 0;">
-  <button id="archive-login" type="button">
-    使用 GitHub 登录以编辑
-  </button>
-
-  <button id="archive-logout" type="button" hidden>
-    退出编辑模式
-  </button>
-
-  <span id="archive-auth-status">
-    访客模式：仅浏览
-  </span>
-</div>
-
-        
-  <button id="add-archive-btn" type="button" hidden >
+  <button id="add-archive-btn" type="button" >
     + 添加旅行记录
   </button>
 
@@ -558,7 +542,7 @@
 
     <input id="archive-images" type="file" accept="image/*" multiple>
 
-    <button id="archive-save-btn" type="button">保存并发布</button>
+    <button id="archive-save-btn" type="button">保存</button>
     <button id="archive-cancel-btn" type="button">取消</button>
   </div>
 </div>
@@ -585,136 +569,6 @@
     const archiveSaveBtn = document.getElementById('archive-save-btn');
     
     const inventoryCategories = ['卡带', '通贩', '中古'];
-    
-    // GitHub 登录：连接 Cloudflare Worker
-    const archiveApi =
-      'https://curly-wind-151eanns-website-api.ann657299.workers.dev';
-
-    const archiveLoginBtn =
-      document.getElementById('archive-login');
-    const archiveLogoutBtn =
-      document.getElementById('archive-logout');
-    const archiveAuthStatus =
-      document.getElementById('archive-auth-status');
-
-    let archiveSession =
-      sessionStorage.getItem('ann_archive_session') || '';
-    let archiveAuthenticated = false;
-
-    function updateArchiveLoginUI() {
-      archiveLoginBtn.hidden = archiveAuthenticated;
-      archiveLogoutBtn.hidden = !archiveAuthenticated;
-      addArchiveBtn.hidden = !archiveAuthenticated;
-
-      archiveAuthStatus.textContent = archiveAuthenticated
-        ? '已登录：可以编辑'
-        : '访客模式：仅浏览';
-
-      
-      document.querySelectorAll('.archive-actions')
-        .forEach(el => {
-          el.hidden = !archiveAuthenticated;
-        });
-
-      // 未登录时关闭编辑器
-      if (!archiveAuthenticated && archiveEditor) {
-        archiveEditor.hidden = true;
-      }
-
-    }
-
-    archiveLoginBtn.addEventListener('click', () => {
-      window.location.href = archiveApi + '/login';
-    });
-
-    archiveLogoutBtn.addEventListener('click', async () => {
-      try {
-        await fetch(archiveApi + '/logout', {
-          method: 'POST',
-          headers: {
-            Authorization: 'Bearer ' + archiveSession
-          }
-        });
-      } catch (error) {
-        console.error(error);
-      }
-
-      archiveSession = '';
-      archiveAuthenticated = false;
-      sessionStorage.removeItem('ann_archive_session');
-     updateArchiveLoginUI();
-       });
-
-    async function initializeArchiveLogin() {
-      const match =
-        /^#ann-login=([a-f0-9]{64})$/.exec(location.hash);
-
-      if (match) {
-        history.replaceState(
-          null,
-          '',
-          location.pathname + location.search + '#2026'
-        );
-
-        try {
-          const response = await fetch(archiveApi + '/exchange', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              ticket: match[1]
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('登录凭证交换失败');
-          }
-
-          const data = await response.json();
-          archiveSession = data.session;
-          sessionStorage.setItem(
-            'ann_archive_session',
-            archiveSession
-          );
-        } catch (error) {
-          console.error(error);
-          alert('GitHub 登录失败，请重试。');
-        }
-      }
-
-      if (archiveSession) {
-        try {
-          const response = await fetch(archiveApi + '/me', {
-            headers: {
-              Authorization: 'Bearer ' + archiveSession
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            archiveAuthenticated =
-              data.authenticated === true;
-          }
-        } catch (error) {
-          console.error(error);
-        }
-      }
-
-      if (!archiveAuthenticated) {
-        archiveSession = '';
-        sessionStorage.removeItem('ann_archive_session');
-      }
-
-      updateArchiveLoginUI();
-
-       if (match) {
-        updatePage();
-      }
-    }
-
-    initializeArchiveLogin();
-
     const archiveYears = ['2026', '2025', '2024', '2023', '2022'];
     function updatePage() {
       const category = decodeURIComponent(location.hash.slice(1));
@@ -791,7 +645,6 @@
     inlineImageInput.value = '';
   }
   function openArchiveEditor(record = null) {
-    if (!archiveAuthenticated) return;
     editingArchiveId = record ? record.id : null;
     archiveTitleInput.value = record ? record.title : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
@@ -861,201 +714,54 @@
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.textContent = '删除';
-     
-      deleteBtn.addEventListener('click', async () => {
-        if (!archiveAuthenticated) {
-          alert('请先使用 GitHub 登录');
-          return;
-        }
-
-        if (!confirm('确定删除这条旅行记录并发布到 GitHub 吗？')) {
-          return;
-        }
-
-        const next = archiveRecords.filter(
-          item => item.id !== record.id
-        );
-
-        deleteBtn.disabled = true;
-        deleteBtn.textContent = '正在删除...';
-
-        try {
-          await publishArchive(year, next);
-
-          archiveRecords = next;
-
-          if (editingArchiveId === record.id) {
-            closeArchiveEditor();
-          }
-
-          renderArchive(year);
-
-          alert('旅行记录已从 GitHub 删除。');
-        } catch (error) {
-          console.error(error);
-          alert('删除失败：' + error.message);
-
-          deleteBtn.disabled = false;
-          deleteBtn.textContent = '删除';
-        }
+      deleteBtn.addEventListener('click', () => {
+        if (!confirm('确定删除这条旅行记录吗？')) return;
+        const next = archiveRecords.filter(item => item.id !== record.id);
+        if (!persistArchive(year, next)) return;
+        archiveRecords = next;
+        if (editingArchiveId === record.id) closeArchiveEditor();
+        renderArchive(year);
       });
-
       actions.append(editBtn, deleteBtn);
-
-      // 只有登录的管理员才能看到编辑和删除按钮
-      actions.hidden = !archiveAuthenticated;
-
-      card.appendChild(actions);
+      // Public travel diary is read-only; publishing is managed through /admin/.
       archiveList.appendChild(card);
     });
   }
- 
   async function loadArchive(year = '2026') {
     activeArchiveYear = year;
     closeArchiveEditor();
-
     const sequence = ++archiveLoadSequence;
     archiveList.textContent = '正在加载旅行记录...';
-
     try {
-      // 优先读取新版公开日记
-      let response = await fetch(
-        'data/public-archive-' + year + '.json',
-        { cache: 'no-store' }
-      );
-
-      let records;
-
-      if (response.ok) {
-        const data = await response.json();
-        records = Array.isArray(data.entries)
-          ? data.entries
-          : [];
-      } else if (response.status === 404) {
-        // 新版文件不存在时，读取原来的旧日记
-        response = await fetch(
-          'data/archive-' + year + '.json',
-          { cache: 'no-store' }
-        );
-
-        if (!response.ok) {
-          if (response.status !== 404) {
-            throw new Error('读取旧日记失败');
-          }
-          records = [];
-        } else {
-          const data = await response.json();
-          records = Array.isArray(data) ? data : [];
-        }
-      } else {
-        throw new Error('读取公开日记失败');
-      }
-
+      const response = await fetch('data/public-archive-' + year + '.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('无法读取旅行数据');
+      const data = await response.json();
       if (sequence !== archiveLoadSequence) return;
-
-      archiveRecords = records.map(normalizeArchive);
+      archiveRecords = (Array.isArray(data.entries) ? data.entries : []).map(normalizeArchive);
     } catch (error) {
       if (sequence !== archiveLoadSequence) return;
-
-      console.error('读取旅行记录失败', error);
-      archiveList.textContent =
-        '旅行记录暂时无法加载，请稍后刷新页面。';
-      return;
+      console.info('未找到旅行记录文件，将使用空白记录', error);
+      archiveRecords = [];
     }
-
     renderArchive(year);
   }
-
-  
-  // 向 Cloudflare Worker 发送经过身份验证的请求
-  async function archiveRequest(path, options = {}) {
-    if (!archiveAuthenticated || !archiveSession) {
-      throw new Error('请先登录 GitHub');
-    }
-
-    const response = await fetch(archiveApi + path, {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: 'Bearer ' + archiveSession
-      }
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || '请求失败');
-    }
-
-    return data;
   }
-
-  // 上传单张照片到 GitHub
-  async function uploadArchiveImage(file) {
-    if (file.size > 4 * 1024 * 1024) {
-      throw new Error(
-        '照片超过 4 MB，请先压缩：' + file.name
-      );
-    }
-
-    const result = await archiveRequest('/upload', {
-      method: 'POST',
-      headers: {
-        'Content-Type': file.type
-      },
-      body: file
-    });
-
-    return result.path;
-  }
-
-  // 上传插入在日记正文中的照片
   async function persistInlineImages() {
     const imgs = [...richEditor.querySelectorAll('img')];
-
     for (const img of imgs) {
-      const src = img.getAttribute('src') || '';
-
-      if (
-        !src.startsWith('blob:') &&
-        !src.startsWith('data:image/')
-      ) {
-        continue;
-      }
-
-      const response = await fetch(src);
+      if (!img.src.startsWith('blob:')) continue;
+      const response = await fetch(img.src);
       const blob = await response.blob();
-
-      const type = blob.type || 'image/png';
-      const file = new File(
-        [blob],
-        'inline-image',
-        { type }
-      );
-
-      const path = await uploadArchiveImage(file);
-      img.setAttribute('src', path);
-
-      if (src.startsWith('blob:')) {
-        URL.revokeObjectURL(src);
-      }
+      img.src = await readFileAsDataURL(blob);
     }
   }
-
-  // 将某一年的旅行记录发布到 GitHub
-  async function publishArchive(year, records) {
-    return archiveRequest('/publish', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        year,
-        entries: records
-      })
-    });
-  }
-
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
     italicBtn.addEventListener('click', () => {formatText('italic');});
@@ -1125,77 +831,7 @@ inlineImageInput.addEventListener('change', () => {
     
 addArchiveBtn.addEventListener('click', () => openArchiveEditor());
 archiveCancelBtn.addEventListener('click', closeArchiveEditor);
-
 archiveSaveBtn.addEventListener('click', async () => {
-  if (!archiveAuthenticated) {
-    alert('请先使用 GitHub 登录');
-    return;
-  }
-
-  const year = activeArchiveYear;
-  if (!year) return;
-
-  const title = archiveTitleInput.value.trim();
-  if (!title) {
-    alert('请先填写旅行标题');
-    return;
-  }
-
-  archiveSaveBtn.disabled = true;
-  archiveSaveBtn.textContent = '正在上传并发布...';
-
-  try {
-    // 上传正文中插入的图片
-    await persistInlineImages();
-
-    // 上传底部选择的多张图片
-    const images = [];
-
-    for (const file of archiveImagesInput.files) {
-      const path = await uploadArchiveImage(file);
-      images.push(path);
-    }
-
-    const old = archiveRecords.find(
-      item => item.id === editingArchiveId
-    );
-
-    const record = {
-      id: old ? old.id : archiveId(),
-      title,
-      description: richEditor.innerText,
-      html: richEditor.innerHTML,
-      images: [
-        ...(old ? old.images : []),
-        ...images
-      ]
-    };
-
-    const next = old
-      ? archiveRecords.map(
-          item => item.id === old.id ? record : item
-        )
-      : [...archiveRecords, record];
-
-    // 真正发布到 GitHub
-    await publishArchive(year, next);
-
-    archiveRecords = next;
-    closeArchiveEditor();
-    renderArchive(year);
-
-    alert(
-      '发布成功！GitHub Pages 可能需要几分钟更新。'
-    );
-  } catch (error) {
-    console.error(error);
-    alert('发布失败：' + error.message);
-  } finally {
-    archiveSaveBtn.disabled = false;
-    archiveSaveBtn.textContent = '保存并发布';
-  }
-});
-
   const year = activeArchiveYear;
   if (!year) return;
   archiveSaveBtn.disabled = true;
