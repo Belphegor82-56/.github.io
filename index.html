@@ -644,11 +644,6 @@
       sessionStorage.removeItem('ann_archive_session');
      updateArchiveLoginUI();
 
-      // GitHub 登录返回后，正确显示旅行日记页面
-      if (match) {
-        updatePage();
-      }
-    }
     async function initializeArchiveLogin() {
       const match =
         /^#ann-login=([a-f0-9]{64})$/.exec(location.hash);
@@ -711,6 +706,11 @@
       }
 
       updateArchiveLoginUI();
+    }
+
+       if (match) {
+        updatePage();
+      }
     }
 
     initializeArchiveLogin();
