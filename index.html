@@ -497,12 +497,13 @@
             <label>平台<input name="platform" type="text" maxlength="120"></label>
             <label>种类<input name="kind" type="text" maxlength="120"></label>
             <label>到货<span><input name="received" type="checkbox" style="width:auto"> 已到货</span></label>
+            <label>排上了吗<span><input name="queued" type="checkbox" style="width:auto"> 已排上</span></label>
             <label>交肾情况<span><input name="paid" type="checkbox" style="width:auto"> 已交肾</span></label>
             <label class="inventory-wide">图片（单张，自动压缩）<input id="group-order-image" type="file" accept="image/*"><img id="group-order-preview" class="inventory-preview" alt="群排图片预览" hidden></label>
           </div>
           <div class="dream-actions"><button type="submit" class="dream-btn">保存到本浏览器</button><button id="group-order-cancel" type="button" class="dream-btn">取消</button></div>
         </form>
-        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>到货</th><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>群名</th><th>平台</th><th>种类</th><th>交肾情况</th><th>操作</th></tr></thead><tbody id="group-order-body"></tbody></table></div>
+        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>到货</th><th>排上了吗</th><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>群名</th><th>平台</th><th>种类</th><th>交肾情况</th><th>操作</th></tr></thead><tbody id="group-order-body"></tbody></table></div>
       </section>
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
@@ -1319,6 +1320,7 @@ function renderInventory(category) {
         if (record && record[field] !== undefined && record[field] !== null) control.value = String(record[field]);
       }
       groupOrderForm.elements.namedItem('received').checked = Boolean(record && record.received);
+      groupOrderForm.elements.namedItem('queued').checked = Boolean(record && record.queued);
       groupOrderForm.elements.namedItem('paid').checked = Boolean(record && record.paid);
       if (!record) groupOrderForm.elements.namedItem('currency').value = 'JPY';
       groupOrderPreview.hidden = !groupOrderImageData;
@@ -1371,6 +1373,7 @@ function renderInventory(category) {
         id: groupOrderEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random()),
         image: groupOrderImageData,
         received: groupOrderForm.elements.namedItem('received').checked,
+        queued: groupOrderForm.elements.namedItem('queued').checked,
         paid: groupOrderForm.elements.namedItem('paid').checked
       };
       for (const field of groupOrderFields) {
@@ -1391,7 +1394,7 @@ function renderInventory(category) {
       if (!records.length) {
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 11;
+        td.colSpan = 12;
         td.className = 'inventory-empty';
         td.textContent = '暂无记录，点击上方「＋ 添加」开始记录群排。';
         tr.appendChild(td);
@@ -1422,6 +1425,7 @@ function renderInventory(category) {
           return td;
         }
         tr.appendChild(checkboxCell('received', '到货'));
+        tr.appendChild(checkboxCell('queued', '排上了吗'));
         const imgCell = document.createElement('td');
         if (record.image) {
           const img = document.createElement('img');
