@@ -331,7 +331,8 @@
     .sidebar .subcategories a[data-category="卡带"],
     .sidebar .subcategories a[data-category="通贩"],
     .sidebar .subcategories a[data-category="梦情"],
-    .sidebar .subcategories a[data-category="中古"] {
+    .sidebar .subcategories a[data-category="中古"],
+    .sidebar .subcategories a[data-category="群排"] {
       font-family: 'STXinwei', '华文新魏', 'STKaiti', 'KaiTi', serif;
       font-style: italic;
     }
@@ -426,6 +427,7 @@
             <a href="#通贩" data-category="通贩">通贩</a>
             <a href="#梦情" data-category="梦情">梦情</a>
             <a href="#中古" data-category="中古">中古</a>
+            <a href="#群排" data-category="群排">群排</a>
           
           </div>
         </details>
@@ -478,6 +480,29 @@
           <div class="dream-actions"><button type="submit" class="dream-btn">保存到本浏览器</button><button id="inventory-cancel" type="button" class="dream-btn">取消</button></div>
         </form>
         <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>到货</th><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>种类</th><th>下单平台</th><th>支付方式</th><th>出荷方式</th><th>下单日期</th><th>出荷日期</th><th>操作</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+      </section>
+
+
+      <!-- 群排：独立表格，沿用卡带分类的视觉样式；数据仅保存于本浏览器 -->
+      <section id="group-order-content" hidden aria-label="群排收藏表格">
+        <div class="inventory-toolbar"><button id="group-order-add" type="button" class="dream-btn">＋ 添加</button></div>
+        <form id="group-order-form" class="inventory-form" hidden>
+          <h3 id="group-order-form-title">新增群排记录</h3>
+          <div class="inventory-fields">
+            <label>作品名<input name="work" type="text" maxlength="160"></label>
+            <label>版本<input name="version" type="text" maxlength="120"></label>
+            <label>数量<input name="quantity" type="number" min="1" step="1" placeholder="可留空"></label>
+            <label>价格<div class="inventory-price"><input name="price" type="number" min="0" step="0.01" placeholder="0.00"><select name="currency"><option value="JPY">JPY 日元</option><option value="CNY">CNY 人民币</option></select></div></label>
+            <label>群名<input name="groupName" type="text" maxlength="160"></label>
+            <label>平台<input name="platform" type="text" maxlength="120"></label>
+            <label>种类<input name="kind" type="text" maxlength="120"></label>
+            <label>到货<span><input name="received" type="checkbox" style="width:auto"> 已到货</span></label>
+            <label>交肾情况<span><input name="paid" type="checkbox" style="width:auto"> 已交肾</span></label>
+            <label class="inventory-wide">图片（单张，自动压缩）<input id="group-order-image" type="file" accept="image/*"><img id="group-order-preview" class="inventory-preview" alt="群排图片预览" hidden></label>
+          </div>
+          <div class="dream-actions"><button type="submit" class="dream-btn">保存到本浏览器</button><button id="group-order-cancel" type="button" class="dream-btn">取消</button></div>
+        </form>
+        <div class="inventory-wrap"><table class="inventory-table"><thead><tr><th>到货</th><th>图片</th><th>作品名</th><th>版本</th><th>数量</th><th>价格</th><th>群名</th><th>平台</th><th>种类</th><th>交肾情况</th><th>操作</th></tr></thead><tbody id="group-order-body"></tbody></table></div>
       </section>
 
       <section id="dream-content" hidden aria-label="梦情收藏记录">
@@ -577,10 +602,12 @@
       if (match) match.closest('details').open = true;
       welcome.hidden = Boolean(match);
       document.body.classList.toggle('home-view', !match);
-      document.body.classList.toggle('collection-view', category === '梦情' || inventoryCategories.includes(category));
+      document.body.classList.toggle('collection-view', category === '梦情' || category === '群排' || inventoryCategories.includes(category));
       archiveContent.hidden = !archiveYears.includes(category);
       document.getElementById('dream-content').hidden = category !== '梦情';
       document.getElementById('inventory-content').hidden = !inventoryCategories.includes(category);
+      document.getElementById('group-order-content').hidden = category !== '群排';
+      if (category === '群排') { groupOrderForm.hidden = true; renderGroupOrders(); }
       if (category === '梦情') renderDreamCards();
       if (inventoryCategories.includes(category)) {
         inventoryForm.hidden = true;
@@ -592,7 +619,7 @@
         loadArchive(category);
       } else if (match) {
         title.textContent = category;
-        description.textContent = inventoryCategories.includes(category) ? '' : '这里可以添加分类 ' + category + ' 的内容。';
+        description.textContent = (category === '群排' || inventoryCategories.includes(category)) ? '' : '这里可以添加分类 ' + category + ' 的内容。';
       } else {
         title.textContent = '我的购物记录';
         description.textContent = '记录我买过的好东西。点击左侧分类查看内容。';
@@ -1255,6 +1282,186 @@ function renderInventory(category) {
     if (locationButton) locationButton.addEventListener('click', updateVisitorLocation);
     // Ask on first load. Permission prompts are controlled by the browser.
     updateVisitorLocation();
+
+    // 群排使用独立的 localStorage key，不触碰卡带/通贩/中古/梦情的数据。
+    const groupOrderKey = 'anns-website-group-orders-v1';
+    const groupOrderForm = document.getElementById('group-order-form');
+    const groupOrderBody = document.getElementById('group-order-body');
+    const groupOrderImage = document.getElementById('group-order-image');
+    const groupOrderPreview = document.getElementById('group-order-preview');
+    const groupOrderFields = ['work','version','quantity','price','currency','groupName','platform','kind'];
+    let groupOrderEditingId = null;
+    let groupOrderImageData = '';
+    function readGroupOrders() {
+      try {
+        const saved = localStorage.getItem(groupOrderKey);
+        const records = saved ? JSON.parse(saved) : [];
+        return Array.isArray(records) ? records : [];
+      } catch (error) { console.error(error); return []; }
+    }
+    function saveGroupOrders(records) {
+      try {
+        localStorage.setItem(groupOrderKey, JSON.stringify(records));
+        return true;
+      } catch (error) {
+        console.error(error);
+        alert('保存失败：浏览器存储空间不足。请尝试更小的图片。');
+        return false;
+      }
+    }
+    function openGroupOrderForm(record = null) {
+      groupOrderForm.reset();
+      groupOrderEditingId = record ? record.id : null;
+      groupOrderImageData = record ? (record.image || '') : '';
+      document.getElementById('group-order-form-title').textContent = record ? '编辑群排记录' : '新增群排记录';
+      for (const field of groupOrderFields) {
+        const control = groupOrderForm.elements.namedItem(field);
+        if (record && record[field] !== undefined && record[field] !== null) control.value = String(record[field]);
+      }
+      groupOrderForm.elements.namedItem('received').checked = Boolean(record && record.received);
+      groupOrderForm.elements.namedItem('paid').checked = Boolean(record && record.paid);
+      if (!record) groupOrderForm.elements.namedItem('currency').value = 'JPY';
+      groupOrderPreview.hidden = !groupOrderImageData;
+      if (groupOrderImageData) groupOrderPreview.src = groupOrderImageData;
+      else groupOrderPreview.removeAttribute('src');
+      groupOrderForm.hidden = false;
+      groupOrderForm.elements.namedItem('work').focus();
+    }
+    document.getElementById('group-order-add').addEventListener('click', () => openGroupOrderForm());
+    document.getElementById('group-order-cancel').addEventListener('click', () => { groupOrderForm.hidden = true; });
+    groupOrderImage.addEventListener('change', async () => {
+      const file = groupOrderImage.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) { alert('请选择图片文件'); return; }
+      try {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        try {
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = url;
+          });
+          const scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          groupOrderImageData = canvas.toDataURL('image/jpeg', 0.68);
+          groupOrderPreview.src = groupOrderImageData;
+          groupOrderPreview.hidden = false;
+        } finally { URL.revokeObjectURL(url); }
+      } catch (error) { console.error(error); alert('图片处理失败，请换一张图片'); }
+    });
+    groupOrderForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const quantityText = groupOrderForm.elements.namedItem('quantity').value.trim();
+      const priceText = groupOrderForm.elements.namedItem('price').value.trim();
+      const quantity = quantityText === '' ? '' : Number(quantityText);
+      const price = priceText === '' ? '' : Number(priceText);
+      if ((quantityText && (!Number.isInteger(quantity) || quantity < 1)) ||
+          (priceText && (!Number.isFinite(price) || price < 0))) {
+        alert('数量和价格请输入有效数字，或留空。'); return;
+      }
+      const records = readGroupOrders();
+      const record = {
+        id: groupOrderEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random()),
+        image: groupOrderImageData,
+        received: groupOrderForm.elements.namedItem('received').checked,
+        paid: groupOrderForm.elements.namedItem('paid').checked
+      };
+      for (const field of groupOrderFields) {
+        record[field] = groupOrderForm.elements.namedItem(field).value.trim();
+      }
+      record.quantity = quantity;
+      record.price = price;
+      const index = records.findIndex(item => item.id === groupOrderEditingId);
+      if (index >= 0) records[index] = record;
+      else records.unshift(record);
+      if (!saveGroupOrders(records)) return;
+      groupOrderForm.hidden = true;
+      renderGroupOrders();
+    });
+    function renderGroupOrders() {
+      groupOrderBody.replaceChildren();
+      const records = readGroupOrders();
+      if (!records.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 11;
+        td.className = 'inventory-empty';
+        td.textContent = '暂无记录，点击上方「＋ 添加」开始记录群排。';
+        tr.appendChild(td);
+        groupOrderBody.appendChild(tr);
+        return;
+      }
+      for (const record of records) {
+        const tr = document.createElement('tr');
+        tr.classList.toggle('inventory-received-row', Boolean(record.received));
+        function checkboxCell(field, label) {
+          const td = document.createElement('td');
+          td.className = 'inventory-received-cell';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.className = 'inventory-received-checkbox';
+          input.checked = Boolean(record[field]);
+          input.setAttribute('aria-label', label + '：' + (record.work || '未命名商品'));
+          input.addEventListener('change', () => {
+            const current = readGroupOrders();
+            const target = current.find(item => item.id === record.id);
+            if (!target) { input.checked = !input.checked; return; }
+            target[field] = input.checked;
+            if (!saveGroupOrders(current)) { input.checked = !input.checked; return; }
+            record[field] = input.checked;
+            if (field === 'received') tr.classList.toggle('inventory-received-row', input.checked);
+          });
+          td.appendChild(input);
+          return td;
+        }
+        tr.appendChild(checkboxCell('received', '到货'));
+        const imgCell = document.createElement('td');
+        if (record.image) {
+          const img = document.createElement('img');
+          img.className = 'inventory-thumb';
+          img.src = record.image;
+          img.alt = record.work || '群排图片';
+          imgCell.appendChild(img);
+        } else imgCell.textContent = '—';
+        tr.appendChild(imgCell);
+        const priceLabel = record.price === '' || record.price == null ? '' :
+          Number(record.price).toLocaleString('zh-CN', {maximumFractionDigits:2}) + ' ' + (record.currency === 'CNY' ? 'CNY' : 'JPY');
+        for (const value of [record.work, record.version, record.quantity, priceLabel, record.groupName, record.platform, record.kind]) {
+          const td = document.createElement('td');
+          td.textContent = value === '' || value == null ? '—' : String(value);
+          tr.appendChild(td);
+        }
+        tr.appendChild(checkboxCell('paid', '交肾情况'));
+        const actions = document.createElement('td');
+        actions.className = 'inventory-actions';
+        const stack = document.createElement('div');
+        stack.className = 'inventory-action-stack';
+        const edit = document.createElement('button');
+        edit.type = 'button'; edit.className = 'dream-btn'; edit.textContent = '编辑';
+        edit.addEventListener('click', () => openGroupOrderForm(record));
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'dream-btn'; remove.textContent = '删除';
+        remove.addEventListener('click', () => {
+          if (!confirm('确定删除「' + (record.work || '此记录') + '」吗？')) return;
+          if (saveGroupOrders(readGroupOrders().filter(item => item.id !== record.id))) {
+            groupOrderForm.hidden = true;
+            renderGroupOrders();
+          }
+        });
+        stack.append(edit, remove);
+        actions.appendChild(stack);
+        tr.appendChild(actions);
+        groupOrderBody.appendChild(tr);
+      }
+    }
+
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
