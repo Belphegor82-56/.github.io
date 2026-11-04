@@ -95,3 +95,128 @@ collections:
                 widget: "list"
                 required: false
                 field: {label: "照片", name: "image", widget: "image"}
+
+  - name: "collections"
+    label: "商品与收藏（GitHub 云端）"
+    files:
+      - name: "inventory-cards"
+        label: "卡带"
+        file: "data/inventory-cards.json"
+        format: "json"
+        fields:
+          - label: "记录"
+            name: "entries"
+            widget: "list"
+            required: false
+            summary: "{{fields.work}}"
+            fields:
+              - {label: "记录 ID（勿修改）", name: "id", widget: "string", required: false}
+              - {label: "图片", name: "image", widget: "image", required: false}
+              - {label: "work", name: "work", widget: "string", required: false}
+              - {label: "version", name: "version", widget: "string", required: false}
+              - {label: "quantity", name: "quantity", widget: "string", required: false}
+              - {label: "price", name: "price", widget: "string", required: false}
+              - {label: "currency", name: "currency", widget: "string", required: false}
+              - {label: "kind", name: "kind", widget: "string", required: false}
+              - {label: "platform", name: "platform", widget: "string", required: false}
+              - {label: "shipping", name: "shipping", widget: "string", required: false}
+              - {label: "orderDate", name: "orderDate", widget: "string", required: false}
+              - {label: "shipDate", name: "shipDate", widget: "string", required: false}
+              - {label: "payment", name: "payment", widget: "string", required: false}
+              - {label: "received", name: "received", widget: "boolean", required: false, default: false}
+      - name: "inventory-mailorder"
+        label: "通贩"
+        file: "data/inventory-mailorder.json"
+        format: "json"
+        fields:
+          - label: "记录"
+            name: "entries"
+            widget: "list"
+            required: false
+            summary: "{{fields.work}}"
+            fields:
+              - {label: "记录 ID（勿修改）", name: "id", widget: "string", required: false}
+              - {label: "图片", name: "image", widget: "image", required: false}
+              - {label: "work", name: "work", widget: "string", required: false}
+              - {label: "version", name: "version", widget: "string", required: false}
+              - {label: "quantity", name: "quantity", widget: "string", required: false}
+              - {label: "price", name: "price", widget: "string", required: false}
+              - {label: "currency", name: "currency", widget: "string", required: false}
+              - {label: "kind", name: "kind", widget: "string", required: false}
+              - {label: "platform", name: "platform", widget: "string", required: false}
+              - {label: "shipping", name: "shipping", widget: "string", required: false}
+              - {label: "orderDate", name: "orderDate", widget: "string", required: false}
+              - {label: "shipDate", name: "shipDate", widget: "string", required: false}
+              - {label: "payment", name: "payment", widget: "string", required: false}
+              - {label: "received", name: "received", widget: "boolean", required: false, default: false}
+      - name: "inventory-secondhand"
+        label: "中古"
+        file: "data/inventory-secondhand.json"
+        format: "json"
+        fields:
+          - label: "记录"
+            name: "entries"
+            widget: "list"
+            required: false
+            summary: "{{fields.work}}"
+            fields:
+              - {label: "记录 ID（勿修改）", name: "id", widget: "string", required: false}
+              - {label: "图片", name: "image", widget: "image", required: false}
+              - {label: "work", name: "work", widget: "string", required: false}
+              - {label: "version", name: "version", widget: "string", required: false}
+              - {label: "quantity", name: "quantity", widget: "string", required: false}
+              - {label: "price", name: "price", widget: "string", required: false}
+              - {label: "currency", name: "currency", widget: "string", required: false}
+              - {label: "kind", name: "kind", widget: "string", required: false}
+              - {label: "platform", name: "platform", widget: "string", required: false}
+              - {label: "shipping", name: "shipping", widget: "string", required: false}
+              - {label: "orderDate", name: "orderDate", widget: "string", required: false}
+              - {label: "shipDate", name: "shipDate", widget: "string", required: false}
+              - {label: "payment", name: "payment", widget: "string", required: false}
+              - {label: "received", name: "received", widget: "boolean", required: false, default: false}
+      - name: "group-orders"
+        label: "群排"
+        file: "data/group-orders.json"
+        format: "json"
+        fields:
+          - label: "记录"
+            name: "entries"
+            widget: "list"
+            required: false
+            summary: "{{fields.work}}"
+            fields:
+              - {label: "记录 ID（勿修改）", name: "id", widget: "string", required: false}
+              - {label: "图片", name: "image", widget: "image", required: false}
+              - {label: "work", name: "work", widget: "string", required: false}
+              - {label: "version", name: "version", widget: "string", required: false}
+              - {label: "quantity", name: "quantity", widget: "string", required: false}
+              - {label: "price", name: "price", widget: "string", required: false}
+              - {label: "currency", name: "currency", widget: "string", required: false}
+              - {label: "groupName", name: "groupName", widget: "string", required: false}
+              - {label: "platform", name: "platform", widget: "string", required: false}
+              - {label: "kind", name: "kind", widget: "string", required: false}
+              - {label: "notes", name: "notes", widget: "string", required: false}
+              - {label: "received", name: "received", widget: "boolean", required: false, default: false}
+              - {label: "queued", name: "queued", widget: "boolean", required: false, default: false}
+              - {label: "paid", name: "paid", widget: "boolean", required: false, default: false}
+              - {label: "shippable", name: "shippable", widget: "boolean", required: false, default: false}
+      - name: "dream-records"
+        label: "梦情"
+        file: "data/dream-records.json"
+        format: "json"
+        fields:
+          - label: "记录"
+            name: "entries"
+            widget: "list"
+            required: false
+            summary: "{{fields.name}}"
+            fields:
+              - {label: "记录 ID（勿修改）", name: "id", widget: "string", required: false}
+              - {label: "图片", name: "image", widget: "image", required: false}
+              - {label: "name", name: "name", widget: "string", required: false}
+              - {label: "description", name: "description", widget: "string", required: false}
+              - {label: "status", name: "status", widget: "string", required: false}
+              - {label: "amount", name: "amount", widget: "string", required: false}
+              - {label: "currency", name: "currency", widget: "string", required: false}
+              - {label: "targetPrice", name: "targetPrice", widget: "string", required: false}
+              - {label: "targetCurrency", name: "targetCurrency", widget: "string", required: false}
