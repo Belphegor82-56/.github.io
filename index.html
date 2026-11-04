@@ -1588,7 +1588,7 @@ function renderInventory(category) {
           for (const key of keys) if (Array.isArray(payload.collections[key]))
             localStorage.setItem(key,JSON.stringify(payload.collections[key]));
           renderGroupOrders();
-          renderDreamRecords();
+          renderDreamCards();
           renderInventory();
           cloudMessage('已从 GitHub 加载云端记录');
         }
