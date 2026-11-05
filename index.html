@@ -1539,14 +1539,30 @@ function renderInventory(category) {
           input.className = 'inventory-received-checkbox';
           input.checked = Boolean(record[field]);
           input.setAttribute('aria-label', label + '：' + (record.work || '未命名商品'));
-          input.addEventListener('change', () => {
+          input.disabled = !(cloudGroupOrders !== null && window.annsCloud?.isAdmin() === true);
+          input.addEventListener('change', async () => {
+            if (cloudGroupOrders === null || window.annsCloud?.isAdmin() !== true) { input.checked = !input.checked; return; }
             const current = readGroupOrders();
             const target = current.find(item => item.id === record.id);
             if (!target) { input.checked = !input.checked; return; }
             target[field] = input.checked;
-            if (!saveGroupOrders(current)) { input.checked = !input.checked; return; }
-            record[field] = input.checked;
-            if (field === 'received') tr.classList.toggle('inventory-received-row', input.checked);
+            input.disabled = true;
+            try {
+              const result = await window.annsCloud.request('/publish-collection',{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({category:'群排',entries:current})
+              });
+              if (!result.ok) throw new Error('GitHub 保存失败');
+              cloudGroupOrders = current;
+              record[field] = input.checked;
+              if (field === 'received') tr.classList.toggle('inventory-received-row', input.checked);
+            } catch(error) {
+              input.checked = !input.checked;
+              console.error('Group checkbox cloud save failed:',error);
+              alert('群排状态保存失败：'+error.message);
+            } finally {
+              input.disabled = window.annsCloud?.isAdmin() !== true;
+            }
           });
           td.appendChild(input);
           return td;
@@ -1600,7 +1616,7 @@ function renderInventory(category) {
 
     // Group-order module is initialized above; only now fetch its GitHub data.
     const groupCloudStyle = document.createElement('style');
-    groupCloudStyle.textContent = '#group-order-add,#group-order-content .inventory-actions,#group-order-content .inventory-received-checkbox{display:none!important}';
+    groupCloudStyle.textContent = '#group-order-add,#group-order-content .inventory-actions{display:none!important}';
     document.head.appendChild(groupCloudStyle);
     groupOrderForm.hidden = true;
     async function loadCloudGroupOrders() {
@@ -1616,6 +1632,7 @@ function renderInventory(category) {
       }
     }
     loadCloudGroupOrders();
+    window.addEventListener('anns-admin-ready',() => { if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders(); });
 
     window.addEventListener('hashchange', updatePage);
     updatePage();
