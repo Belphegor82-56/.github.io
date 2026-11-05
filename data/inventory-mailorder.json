@@ -195,18 +195,18 @@
     {
       "id": "excel-通贩-13",
       "image": "",
+      "received": false,
       "work": "ジョジョの奇妙な冒険7",
       "version": "ＡＵＲＥＸ　ＡＸ－ＲＰ１０　ＪＯＪＯ　ｍａｇａｚｉｎｅ　Ｅｄｉｔｉｏｎ",
-      "quantity": "1",
-      "price": "19800",
+      "quantity": 1,
+      "price": 19800,
       "currency": "JPY",
       "kind": "其他",
       "platform": "ジャンプキャラクターズストア",
+      "payment": "クレジットカード",
       "shipping": "配送（杨主任家）",
       "orderDate": "2026-04-09",
-      "shipDate": "2026年11月下旬",
-      "payment": "クレジットカード",
-      "received": false
+      "shipDate": "2027年1月下旬"
     },
     {
       "id": "excel-通贩-14",
