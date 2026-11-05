@@ -1042,9 +1042,40 @@ function readInventory(category) {
   try { const saved = localStorage.getItem(inventoryKey(category)); const records = saved === null ? (excelInventoryBaseline[category] || []) : JSON.parse(saved); return Array.isArray(records) ? records : []; }
   catch(error) { console.error(error); return []; }
 }
-function saveInventory(category, records) {
-  try { localStorage.setItem(inventoryKey(category), JSON.stringify(records)); return true; }
-  catch(error) { console.error(error); alert('保存失败：本浏览器存储空间不足。请使用更小的图片并备份数据。'); return false; }
+let inventoryCloudReady = false;
+let inventorySaving = false;
+const inventoryCloudPaths = {'卡带':'data/inventory-cards.json','通贩':'data/inventory-mailorder.json','中古':'data/inventory-secondhand.json'};
+function inventoryAdmin() { return inventoryCloudReady && !inventorySaving && window.annsCloud?.isAdmin() === true; }
+function inventoryImageUrl(value) { return typeof value === 'string' && value.startsWith('images/uploads/') ? value : (value || ''); }
+async function saveInventory(category, records) {
+  if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
+  inventorySaving = true;
+  refreshInventoryAccess();
+  try {
+    const prepared = records.map(record => ({...record}));
+    for (const record of prepared) {
+      if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
+        const blob = await fetch(record.image).then(response => response.blob());
+        const result = await window.annsCloud.request('/upload',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
+        if (!result.ok || !result.path) throw new Error('图片上传失败');
+        record.image = result.path;
+      }
+    }
+    const result = await window.annsCloud.request('/publish-collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,entries:prepared})});
+    if (!result.ok) throw new Error('GitHub 保存失败');
+    cloudInventory[category] = prepared;
+    return true;
+  } catch(error) {
+    console.error('Cloud save failed:',error);
+    alert('云端保存失败：' + error.message + '。原有云端记录未在网页中替换，请重试。');
+    return false;
+  } finally { inventorySaving = false; refreshInventoryAccess(); }
+}
+function refreshInventoryAccess() {
+  const allowed = inventoryAdmin();
+  document.body.classList.toggle('inventory-cloud-admin',allowed);
+  document.getElementById('inventory-add').disabled = !allowed;
+  if (!allowed) inventoryForm.hidden = true;
 }
 function openInventoryForm(record = null) {
   inventoryForm.reset();
@@ -1057,7 +1088,7 @@ function openInventoryForm(record = null) {
   });
   if (!record) { inventoryForm.elements.namedItem('quantity').value = ''; inventoryForm.elements.namedItem('currency').value = 'JPY'; }
   inventoryPreview.hidden = !inventoryImageData;
-  if (inventoryImageData) inventoryPreview.src = inventoryImageData;
+  if (inventoryImageData) inventoryPreview.src = inventoryImageUrl(inventoryImageData);
   else inventoryPreview.removeAttribute('src');
   inventoryForm.hidden = false;
   inventoryForm.elements.namedItem('work').focus();
@@ -1087,7 +1118,7 @@ inventoryImage.addEventListener('change', async () => {
     inventoryPreview.hidden = false;
   } catch(error) { console.error(error); alert('图片处理失败，请换一张图片'); }
 });
-inventoryForm.addEventListener('submit', event => {
+inventoryForm.addEventListener('submit', async event => {
   event.preventDefault();
   const category = inventoryCategory();
   if (!inventoryCategories.includes(category)) return;
@@ -1107,7 +1138,7 @@ inventoryForm.addEventListener('submit', event => {
   const index = records.findIndex(item => item.id === inventoryEditingId);
   if (index >= 0) records[index] = record;
   else records.unshift(record);
-  if (!saveInventory(category,records)) return;
+  if (!await saveInventory(category,records)) return;
   inventoryForm.hidden = true;
   renderInventory(category);
 });
@@ -1130,12 +1161,12 @@ function renderInventory(category) {
     checkbox.checked = Boolean(record.received);
     checkbox.setAttribute('aria-label', '到货状态：' + (record.work || '未命名商品'));
     checkbox.title = checkbox.checked ? '已到货' : '未到货';
-    checkbox.addEventListener('change', () => {
+    checkbox.addEventListener('change', async () => {
       const records = readInventory(category);
       const target = records.find(item => item.id === record.id);
       if (!target) { checkbox.checked = !checkbox.checked; return; }
       target.received = checkbox.checked;
-      if (!saveInventory(category, records)) { checkbox.checked = !checkbox.checked; return; }
+      if (!await saveInventory(category, records)) { checkbox.checked = !checkbox.checked; return; }
       record.received = checkbox.checked;
       tr.classList.toggle('inventory-received-row', checkbox.checked);
       checkbox.title = checkbox.checked ? '已到货' : '未到货';
@@ -1143,7 +1174,7 @@ function renderInventory(category) {
     receivedCell.appendChild(checkbox);
     tr.appendChild(receivedCell);
     const imageCell = document.createElement('td');
-    if (record.image) { const img = document.createElement('img'); img.src = record.image; img.alt = record.work || '商品图片'; img.className = 'inventory-thumb'; imageCell.appendChild(img); }
+    if (record.image) { const img = document.createElement('img'); img.src = inventoryImageUrl(record.image); img.alt = record.work || '商品图片'; img.className = 'inventory-thumb'; imageCell.appendChild(img); }
     else imageCell.textContent = '—';
     tr.appendChild(imageCell);
     const values = [record.work,record.version,record.quantity,record.price === '' || record.price == null ? '' : Number(record.price).toLocaleString('zh-CN',{maximumFractionDigits:2})+' '+(record.currency === 'CNY' ? 'CNY' : 'JPY'),record.kind,record.platform,record.payment,record.shipping,record.orderDate,record.shipDate];
@@ -1151,9 +1182,9 @@ function renderInventory(category) {
     const actions = document.createElement('td'); actions.className = 'inventory-actions';
     const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'dream-btn'; edit.textContent = '编辑'; edit.addEventListener('click',() => openInventoryForm(record));
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'dream-btn'; remove.textContent = '删除';
-    remove.addEventListener('click',() => {
-      if (!confirm('确定删除「'+(record.work || '此记录')+'」吗？')) return;
-      if (saveInventory(category,readInventory(category).filter(item => item.id !== record.id))) { inventoryForm.hidden = true; renderInventory(category); }
+    remove.addEventListener('click',async () => {
+      if (!inventoryAdmin() || !confirm('确定删除「'+(record.work || '此记录')+'」吗？')) return;
+      if (await saveInventory(category,readInventory(category).filter(item => item.id !== record.id))) { inventoryForm.hidden = true; renderInventory(category); }
     });
     const actionStack = document.createElement('div'); actionStack.className = 'inventory-action-stack';
     actionStack.append(edit,remove); actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
@@ -1180,7 +1211,7 @@ function renderInventory(category) {
           }
           return next;
         });
-        if (!saveInventory(category, [...mergedExisting, ...additions])) allSaved = false;
+        try { localStorage.setItem(inventoryKey(category),JSON.stringify([...mergedExisting,...additions])); } catch(error) { console.error(error); allSaved = false; }
       }
       if (allSaved) localStorage.setItem(marker, 'done');
     }
@@ -1204,6 +1235,8 @@ function renderInventory(category) {
           console.error('Cloud inventory read failed; using local fallback:', result.reason);
         }
       }
+      inventoryCloudReady = results.every(result => result.status === 'fulfilled');
+      refreshInventoryAccess();
       const category = inventoryCategory();
       if (inventoryCategories.includes(category)) renderInventory(category);
     }
@@ -1211,9 +1244,11 @@ function renderInventory(category) {
     // Editing is temporarily disabled so visitors and admins cannot mistake
     // local-only changes for GitHub commits during the read-only rollout.
     const inventoryReadOnlyStyle = document.createElement('style');
-    inventoryReadOnlyStyle.textContent = '#inventory-add,.inventory-actions,.inventory-received-checkbox{display:none!important}';
+    inventoryReadOnlyStyle.textContent = 'body:not(.inventory-cloud-admin) #inventory-add,body:not(.inventory-cloud-admin) .inventory-actions,body:not(.inventory-cloud-admin) .inventory-received-checkbox{display:none!important}';
     document.head.appendChild(inventoryReadOnlyStyle);
     inventoryForm.hidden = true;
+    window.addEventListener('anns-admin-ready',refreshInventoryAccess);
+    refreshInventoryAccess();
 
     // The visitor's device clock determines the displayed local time.
     function updateHomeClock() {
@@ -1624,6 +1659,7 @@ function renderInventory(category) {
       request,
       isAdmin: () => authenticated
     };
+    window.dispatchEvent(new Event('anns-admin-ready'));
   }
 
   initializeAdmin();
