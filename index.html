@@ -1425,17 +1425,50 @@ function renderInventory(category) {
         return Array.isArray(records) ? records : [];
       } catch (error) { console.error(error); return []; }
     }
-    function saveGroupOrders(records) {
-      try {
-        localStorage.setItem(groupOrderKey, JSON.stringify(records));
-        return true;
-      } catch (error) {
-        console.error(error);
-        alert('保存失败：浏览器存储空间不足。请尝试更小的图片。');
-        return false;
+    let groupCloudSaving = false;
+    function groupCloudAdmin() {
+      return cloudGroupOrders !== null && !groupCloudSaving && window.annsCloud?.isAdmin() === true;
+    }
+    function refreshGroupCloudAccess() {
+      const allowed = groupCloudAdmin();
+      document.body.classList.toggle('group-cloud-admin',allowed);
+      document.getElementById('group-order-add').disabled = !allowed;
+      if (!allowed) groupOrderForm.hidden = true;
+      if (decodeURIComponent(location.hash.slice(1)) === '群排') {
+        groupOrderBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !allowed);
       }
     }
-    function openGroupOrderForm(record = null) {
+    async function saveGroupOrders(records) {
+      if (!groupCloudAdmin()) { alert('请先登录管理员并等待群排云端数据加载完成'); return false; }
+      groupCloudSaving = true;
+      refreshGroupCloudAccess();
+      try {
+        const prepared = records.map(item => ({...item}));
+        for (const record of prepared) {
+          if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
+            const blob = await fetch(record.image).then(response => response.blob());
+            const result = await window.annsCloud.request('/upload',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
+            if (!result.ok || !result.path) throw new Error('图片上传失败');
+            record.image = result.path;
+          }
+        }
+        const result = await window.annsCloud.request('/publish-collection',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({category:'群排',entries:prepared})
+        });
+        if (!result.ok) throw new Error('GitHub 保存失败');
+        cloudGroupOrders = prepared;
+        return true;
+      } catch(error) {
+        console.error('Group order cloud save failed:',error);
+        alert('群排云端保存失败：'+error.message);
+        return false;
+      } finally {
+        groupCloudSaving = false;
+        refreshGroupCloudAccess();
+      }
+    }
+        function openGroupOrderForm(record = null) {
       groupOrderForm.reset();
       groupOrderEditingId = record ? record.id : null;
       groupOrderImageData = record ? (record.image || '') : '';
@@ -1455,7 +1488,7 @@ function renderInventory(category) {
       groupOrderForm.hidden = false;
       groupOrderForm.elements.namedItem('work').focus();
     }
-    document.getElementById('group-order-add').addEventListener('click', () => openGroupOrderForm());
+    document.getElementById('group-order-add').addEventListener('click', () => { if (groupCloudAdmin()) openGroupOrderForm(); });
     document.getElementById('group-order-cancel').addEventListener('click', () => { groupOrderForm.hidden = true; });
     groupOrderImage.addEventListener('change', async () => {
       const file = groupOrderImage.files[0];
@@ -1484,7 +1517,8 @@ function renderInventory(category) {
         } finally { URL.revokeObjectURL(url); }
       } catch (error) { console.error(error); alert('图片处理失败，请换一张图片'); }
     });
-    groupOrderForm.addEventListener('submit', event => {
+    groupOrderForm.addEventListener('submit', async event => {
+      if (!groupCloudAdmin()) { event.preventDefault(); return; }
       event.preventDefault();
       const quantityText = groupOrderForm.elements.namedItem('quantity').value.trim();
       const priceText = groupOrderForm.elements.namedItem('price').value.trim();
@@ -1511,7 +1545,7 @@ function renderInventory(category) {
       const index = records.findIndex(item => item.id === groupOrderEditingId);
       if (index >= 0) records[index] = record;
       else records.unshift(record);
-      if (!saveGroupOrders(records)) return;
+      if (!await saveGroupOrders(records)) return;
       groupOrderForm.hidden = true;
       renderGroupOrders();
     });
@@ -1597,12 +1631,13 @@ function renderInventory(category) {
         stack.className = 'inventory-action-stack';
         const edit = document.createElement('button');
         edit.type = 'button'; edit.className = 'dream-btn'; edit.textContent = '编辑';
-        edit.addEventListener('click', () => openGroupOrderForm(record));
+        edit.addEventListener('click', () => { if (groupCloudAdmin()) openGroupOrderForm(record); });
         const remove = document.createElement('button');
         remove.type = 'button'; remove.className = 'dream-btn'; remove.textContent = '删除';
-        remove.addEventListener('click', () => {
-          if (!confirm('确定删除「' + (record.work || '此记录') + '」吗？')) return;
-          if (saveGroupOrders(readGroupOrders().filter(item => item.id !== record.id))) {
+        remove.addEventListener('click', async () => {
+          if (!groupCloudAdmin()) return;
+          if (!confirm('确定从 GitHub 删除「' + (record.work || '此记录') + '」吗？')) return;
+          if (await saveGroupOrders(readGroupOrders().filter(item => item.id !== record.id))) {
             groupOrderForm.hidden = true;
             renderGroupOrders();
           }
@@ -1616,7 +1651,7 @@ function renderInventory(category) {
 
     // Group-order module is initialized above; only now fetch its GitHub data.
     const groupCloudStyle = document.createElement('style');
-    groupCloudStyle.textContent = '#group-order-add,#group-order-content .inventory-actions{display:none!important}';
+    groupCloudStyle.textContent = 'body:not(.group-cloud-admin) #group-order-add,body:not(.group-cloud-admin) #group-order-content .inventory-actions{display:none!important}';
     document.head.appendChild(groupCloudStyle);
     groupOrderForm.hidden = true;
     async function loadCloudGroupOrders() {
@@ -1627,12 +1662,14 @@ function renderInventory(category) {
         if (!payload || !Array.isArray(payload.entries)) throw new Error('Invalid group order JSON');
         cloudGroupOrders = payload.entries;
         if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders();
+        refreshGroupCloudAccess();
       } catch (error) {
         console.error('Unable to load group orders from GitHub:',error);
       }
     }
     loadCloudGroupOrders();
-    window.addEventListener('anns-admin-ready',() => { if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders(); });
+    window.addEventListener('anns-admin-ready',() => { if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders(); refreshGroupCloudAccess(); });
+    refreshGroupCloudAccess();
 
     window.addEventListener('hashchange', updatePage);
     updatePage();
