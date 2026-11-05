@@ -897,7 +897,9 @@ const dreamImage = document.getElementById('dream-image');
 const dreamPreview = document.getElementById('dream-preview');
 let dreamEditingId = null;
 let dreamImageData = '';
+let cloudDreamRecords = null;
 function readDreamRecords() {
+  if (cloudDreamRecords !== null) return cloudDreamRecords.map(record => ({...record}));
   try {
     const data = JSON.parse(localStorage.getItem(dreamKey) || '[]');
     return Array.isArray(data) ? data : [];
@@ -1241,6 +1243,23 @@ function renderInventory(category) {
       if (inventoryCategories.includes(category)) renderInventory(category);
     }
     loadCloudInventory();
+    // Load the existing 13 dream records from GitHub for public display.
+    // This changes frontend code, not the JSON records or image files.
+    const dreamCloudDisplayStyle = document.createElement('style');
+    dreamCloudDisplayStyle.textContent = '#dream-add,.dream-actions{display:none!important}';
+    document.head.appendChild(dreamCloudDisplayStyle);
+    dreamForm.hidden = true;
+    async function loadCloudDreamRecords() {
+      try {
+        const response = await fetch('data/dream-records.json',{cache:'no-store'});
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const payload = await response.json();
+        if (!Array.isArray(payload.entries) || payload.entries.length !== 13) throw new Error('Expected 13 dream records');
+        cloudDreamRecords = payload.entries;
+        if (decodeURIComponent(location.hash.slice(1)) === '梦情') renderDreamCards();
+      } catch(error) { console.error('Dream cloud loading failed; keeping browser data:',error); }
+    }
+    loadCloudDreamRecords();
     // Editing is temporarily disabled so visitors and admins cannot mistake
     // local-only changes for GitHub commits during the read-only rollout.
     const inventoryReadOnlyStyle = document.createElement('style');
