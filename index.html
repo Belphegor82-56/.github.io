@@ -1416,7 +1416,9 @@ function renderInventory(category) {
     const groupOrderFields = ['work','version','quantity','price','currency','groupName','platform','kind','notes'];
     let groupOrderEditingId = null;
     let groupOrderImageData = '';
+    let cloudGroupOrders = null;
     function readGroupOrders() {
+      if (cloudGroupOrders !== null) return cloudGroupOrders.map(item => ({...item}));
       try {
         const saved = localStorage.getItem(groupOrderKey);
         const records = saved ? JSON.parse(saved) : [];
@@ -1595,6 +1597,25 @@ function renderInventory(category) {
         groupOrderBody.appendChild(tr);
       }
     }
+
+    // Group-order module is initialized above; only now fetch its GitHub data.
+    const groupCloudStyle = document.createElement('style');
+    groupCloudStyle.textContent = '#group-order-add,#group-order-content .inventory-actions,#group-order-content .inventory-received-checkbox{display:none!important}';
+    document.head.appendChild(groupCloudStyle);
+    groupOrderForm.hidden = true;
+    async function loadCloudGroupOrders() {
+      try {
+        const response = await fetch('data/group-orders.json', {cache:'no-store'});
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const payload = await response.json();
+        if (!payload || !Array.isArray(payload.entries)) throw new Error('Invalid group order JSON');
+        cloudGroupOrders = payload.entries;
+        if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders();
+      } catch (error) {
+        console.error('Unable to load group orders from GitHub:',error);
+      }
+    }
+    loadCloudGroupOrders();
 
     window.addEventListener('hashchange', updatePage);
     updatePage();
