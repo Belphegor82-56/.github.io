@@ -1,22 +1,6 @@
 {
   "entries": [
     {
-      "id": "3696c37a-efa2-44c6-991c-2d02fae532bd",
-      "image": "",
-      "received": false,
-      "work": "cloud save test",
-      "version": "",
-      "quantity": "",
-      "price": "",
-      "currency": "JPY",
-      "kind": "",
-      "platform": "",
-      "payment": "",
-      "shipping": "",
-      "orderDate": "",
-      "shipDate": ""
-    },
-    {
       "id": "excel-卡带-2",
       "image": "images/uploads/1793844191095-f50281755e129a99.jpg",
       "received": true,
