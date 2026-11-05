@@ -905,9 +905,39 @@ function readDreamRecords() {
     return Array.isArray(data) ? data : [];
   } catch (error) { console.error(error); return []; }
 }
-function saveDreamRecords(records) {
-  try { localStorage.setItem(dreamKey, JSON.stringify(records)); return true; }
-  catch (error) { alert('保存失败：浏览器存储空间不足。请尝试使用更小的图片，或先备份并清理旧记录。'); console.error(error); return false; }
+let dreamCloudSaving = false;
+function dreamCloudAdmin() {
+  return cloudDreamRecords !== null && !dreamCloudSaving && window.annsCloud?.isAdmin() === true;
+}
+function refreshDreamCloudAccess() {
+  const allowed = dreamCloudAdmin();
+  document.body.classList.toggle('dream-cloud-admin',allowed);
+  document.getElementById('dream-add').disabled = !allowed;
+  if (!allowed) dreamForm.hidden = true;
+}
+async function saveDreamRecords(records) {
+  if (!dreamCloudAdmin()) { alert('请先登录管理员，并等待梦情云端数据加载完成。'); return false; }
+  dreamCloudSaving = true;
+  refreshDreamCloudAccess();
+  try {
+    const prepared = records.map(record => ({...record}));
+    for (const record of prepared) {
+      if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
+        const blob = await fetch(record.image).then(response => response.blob());
+        const result = await window.annsCloud.request('/upload',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
+        if (!result.ok || !result.path) throw new Error('图片上传失败');
+        record.image = result.path;
+      }
+    }
+    const result = await window.annsCloud.request('/publish-collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:'梦情',entries:prepared})});
+    if (!result.ok) throw new Error('GitHub 保存失败');
+    cloudDreamRecords = prepared;
+    return true;
+  } catch(error) {
+    console.error('Dream cloud save failed:',error);
+    alert('梦情云端保存失败：' + error.message);
+    return false;
+  } finally { dreamCloudSaving = false; refreshDreamCloudAccess(); }
 }
 function openDreamForm(record = null) {
   dreamForm.reset();
@@ -927,7 +957,7 @@ function openDreamForm(record = null) {
   dreamForm.hidden = false;
   document.getElementById('dream-name').focus();
 }
-document.getElementById('dream-add').addEventListener('click', () => openDreamForm());
+document.getElementById('dream-add').addEventListener('click', () => { if (dreamCloudAdmin()) openDreamForm(); });
 document.getElementById('dream-cancel').addEventListener('click', () => { dreamForm.hidden = true; });
 dreamImage.addEventListener('change', async () => {
   const file = dreamImage.files[0];
@@ -955,7 +985,8 @@ dreamImage.addEventListener('change', async () => {
     dreamPreview.hidden = false;
   } catch (error) { console.error(error); alert('图片处理失败，请尝试其他图片'); }
 });
-dreamForm.addEventListener('submit', (event) => {
+dreamForm.addEventListener('submit', async (event) => {
+  if (!dreamCloudAdmin()) { event.preventDefault(); return; }
   event.preventDefault();
   const name = document.getElementById('dream-name').value.trim();
   const amount = document.getElementById('dream-amount').value;
@@ -977,7 +1008,7 @@ dreamForm.addEventListener('submit', (event) => {
   const existingIndex = records.findIndex(item => item.id === dreamEditingId);
   if (existingIndex >= 0) records[existingIndex] = record;
   else records.unshift(record);
-  if (!saveDreamRecords(records)) return;
+  if (!await saveDreamRecords(records)) return;
   dreamForm.hidden = true;
   renderDreamCards();
 });
@@ -1015,12 +1046,13 @@ function renderDreamCards() {
       card.appendChild(target);
     }
     const actions = document.createElement('div'); actions.className = 'dream-actions';
-    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '编辑'; edit.addEventListener('click', () => openDreamForm(record));
+    const edit = document.createElement('button'); edit.className = 'dream-btn'; edit.type = 'button'; edit.textContent = '编辑'; edit.addEventListener('click', () => { if (dreamCloudAdmin()) openDreamForm(record); });
     const remove = document.createElement('button'); remove.className = 'dream-btn'; remove.type = 'button'; remove.textContent = '删除';
-    remove.addEventListener('click', () => {
-      if (!confirm('确定删除「' + record.name + '」吗？此操作会删除当前浏览器中的记录。')) return;
+    remove.addEventListener('click', async () => {
+      if (!dreamCloudAdmin()) return;
+      if (!confirm('确定从 GitHub 云端删除「' + record.name + '」吗？')) return;
       const next = readDreamRecords().filter(item => item.id !== record.id);
-      if (saveDreamRecords(next)) { dreamForm.hidden = true; renderDreamCards(); }
+      if (await saveDreamRecords(next)) { dreamForm.hidden = true; renderDreamCards(); }
     });
     actions.append(edit, remove); card.appendChild(actions); dreamList.appendChild(card);
   });
@@ -1246,7 +1278,7 @@ function renderInventory(category) {
     // Load the existing 13 dream records from GitHub for public display.
     // This changes frontend code, not the JSON records or image files.
     const dreamCloudDisplayStyle = document.createElement('style');
-    dreamCloudDisplayStyle.textContent = '#dream-add,.dream-actions{display:none!important}';
+    dreamCloudDisplayStyle.textContent = 'body:not(.dream-cloud-admin) #dream-add,body:not(.dream-cloud-admin) .dream-actions{display:none!important}';
     document.head.appendChild(dreamCloudDisplayStyle);
     dreamForm.hidden = true;
     async function loadCloudDreamRecords() {
@@ -1254,12 +1286,15 @@ function renderInventory(category) {
         const response = await fetch('data/dream-records.json',{cache:'no-store'});
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const payload = await response.json();
-        if (!Array.isArray(payload.entries) || payload.entries.length !== 13) throw new Error('Expected 13 dream records');
+        if (!Array.isArray(payload.entries)) throw new Error('Invalid dream records');
         cloudDreamRecords = payload.entries;
+        refreshDreamCloudAccess();
         if (decodeURIComponent(location.hash.slice(1)) === '梦情') renderDreamCards();
       } catch(error) { console.error('Dream cloud loading failed; keeping browser data:',error); }
     }
     loadCloudDreamRecords();
+    window.addEventListener('anns-admin-ready',refreshDreamCloudAccess);
+    refreshDreamCloudAccess();
     // Editing is temporarily disabled so visitors and admins cannot mistake
     // local-only changes for GitHub commits during the read-only rollout.
     const inventoryReadOnlyStyle = document.createElement('style');
