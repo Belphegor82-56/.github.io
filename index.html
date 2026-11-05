@@ -897,7 +897,9 @@ const dreamImage = document.getElementById('dream-image');
 const dreamPreview = document.getElementById('dream-preview');
 let dreamEditingId = null;
 let dreamImageData = '';
+let cloudDreamRecords = null;
 function readDreamRecords() {
+  if (cloudDreamRecords !== null) return cloudDreamRecords.map(record => ({...record}));
   try {
     const data = JSON.parse(localStorage.getItem(dreamKey) || '[]');
     return Array.isArray(data) ? data : [];
@@ -1250,6 +1252,30 @@ function renderInventory(category) {
     window.addEventListener('anns-admin-ready',refreshInventoryAccess);
     refreshInventoryAccess();
 
+    // Fetch cloud records for public viewing; this commit changes website code only.
+    const extraCloudStyle = document.createElement('style');
+    extraCloudStyle.textContent = '#dream-add,#group-order-add,.dream-actions,#group-order-content .inventory-actions,#group-order-content .inventory-received-checkbox{display:none!important}';
+    document.head.appendChild(extraCloudStyle);
+    dreamForm.hidden = true;
+    groupOrderForm.hidden = true;
+    async function loadExtraCloudCollections() {
+      const targets = [['梦情','data/dream-records.json',13],['群排','data/group-orders.json',1]];
+      for (const [category,path,expected] of targets) {
+        try {
+          const response = await fetch(path,{cache:'no-store'});
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const payload = await response.json();
+          if (!Array.isArray(payload.entries) || payload.entries.length !== expected) throw new Error('Unexpected record count');
+          if (category === '梦情') cloudDreamRecords = payload.entries;
+          else cloudGroupOrders = payload.entries;
+        } catch(error) { console.error('Cloud collection loading failed: ' + category,error); }
+      }
+      const category = decodeURIComponent(location.hash.slice(1));
+      if (category === '梦情') renderDreamCards();
+      if (category === '群排') renderGroupOrders();
+    }
+    loadExtraCloudCollections();
+
     // The visitor's device clock determines the displayed local time.
     function updateHomeClock() {
       const now = new Date();
@@ -1362,7 +1388,9 @@ function renderInventory(category) {
     const groupOrderFields = ['work','version','quantity','price','currency','groupName','platform','kind','notes'];
     let groupOrderEditingId = null;
     let groupOrderImageData = '';
+    let cloudGroupOrders = null;
     function readGroupOrders() {
+      if (cloudGroupOrders !== null) return cloudGroupOrders.map(record => ({...record}));
       try {
         const saved = localStorage.getItem(groupOrderKey);
         const records = saved ? JSON.parse(saved) : [];
