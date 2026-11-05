@@ -1293,6 +1293,22 @@ function renderInventory(category) {
       } catch(error) { console.error('Dream cloud loading failed; keeping browser data:',error); }
     }
     loadCloudDreamRecords();
+    // Fetch group order data for display only; existing JSON and browser data remain unchanged.
+    const groupCloudDisplayStyle = document.createElement('style');
+    groupCloudDisplayStyle.textContent = '#group-order-add,#group-order-content .inventory-actions,#group-order-content .inventory-received-checkbox{display:none!important}';
+    document.head.appendChild(groupCloudDisplayStyle);
+    groupOrderForm.hidden = true;
+    async function loadCloudGroupOrders() {
+      try {
+        const response = await fetch('data/group-orders.json',{cache:'no-store'});
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const payload = await response.json();
+        if (!Array.isArray(payload.entries)) throw new Error('Invalid group order records');
+        cloudGroupOrders = payload.entries;
+        if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders();
+      } catch(error) { console.error('Group order cloud loading failed; keeping browser data:',error); }
+    }
+    loadCloudGroupOrders();
     window.addEventListener('anns-admin-ready',refreshDreamCloudAccess);
     refreshDreamCloudAccess();
     // Editing is temporarily disabled so visitors and admins cannot mistake
@@ -1416,7 +1432,9 @@ function renderInventory(category) {
     const groupOrderFields = ['work','version','quantity','price','currency','groupName','platform','kind','notes'];
     let groupOrderEditingId = null;
     let groupOrderImageData = '';
+    let cloudGroupOrders = null;
     function readGroupOrders() {
+      if (cloudGroupOrders !== null) return cloudGroupOrders.map(record => ({...record}));
       try {
         const saved = localStorage.getItem(groupOrderKey);
         const records = saved ? JSON.parse(saved) : [];
