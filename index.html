@@ -1478,5 +1478,125 @@ function renderInventory(category) {
     window.addEventListener('hashchange', updatePage);
     updatePage();
   </script>
+  
+<script>
+(() => {
+  const API = "https://curly-wind-151eanns-website-api.ann657299.workers.dev";
+  const KEY = "anns-admin-session";
+
+  const getSession = () => sessionStorage.getItem(KEY);
+
+  async function request(path, options = {}) {
+    const session = getSession();
+    const headers = {
+      ...(options.headers || {}),
+      ...(session ? { Authorization: "Bearer " + session } : {})
+    };
+
+    const response = await fetch(API + path, {
+      ...options,
+      headers
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Request failed");
+    }
+
+    return result;
+  }
+
+  async function initializeAdmin() {
+    const ticket = location.hash.match(
+      /^#ann-login=([a-f0-9]{64})$/
+    )?.[1];
+
+    if (ticket) {
+      history.replaceState(
+        null,
+        "",
+        location.pathname + location.search
+      );
+
+      try {
+        const result = await request("/exchange", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ ticket })
+        });
+
+        sessionStorage.setItem(KEY, result.session);
+      } catch (error) {
+        alert("管理员登录失败：" + error.message);
+      }
+    }
+
+    let authenticated = false;
+
+    if (getSession()) {
+      try {
+        const result = await request("/me");
+        authenticated = result.authenticated === true;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (!authenticated) {
+      sessionStorage.removeItem(KEY);
+    }
+
+    const toolbar = document.createElement("div");
+    toolbar.id = "anns-admin-toolbar";
+    toolbar.style.cssText = [
+      "position:fixed",
+      "bottom:18px",
+      "right:18px",
+      "z-index:9999",
+      "background:#fff",
+      "color:#222",
+      "border:1px solid #bbb",
+      "border-radius:12px",
+      "padding:10px",
+      "box-shadow:0 3px 12px #0002"
+    ].join(";");
+
+    const button = document.createElement("button");
+    button.type = "button";
+
+    if (authenticated) {
+      button.textContent = "管理员已登录 · 退出";
+      button.onclick = async () => {
+        try {
+          await request("/logout", { method: "POST" });
+        } catch (error) {
+          console.error(error);
+        }
+        sessionStorage.removeItem(KEY);
+        location.reload();
+      };
+    } else {
+      button.textContent = "管理员登录";
+      button.onclick = () => {
+        location.href = API + "/login";
+      };
+    }
+
+    toolbar.appendChild(button);
+    document.body.appendChild(toolbar);
+
+    window.annsCloud = {
+      request,
+      isAdmin: () => authenticated
+    };
+  }
+
+  initializeAdmin();
+})();
+</script>
+
 </body>
 </html>
