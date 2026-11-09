@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "82029924-b569-4908-a5c1-15939779798f",
+      "image": "images/uploads/1794198073699-464a1100963d32dd.jpg",
+      "received": false,
+      "work": "ファントムバスターズ",
+      "version": "アクリル色紙－Ｍｅｒｒｙ　Ｃｈｒｉｓｔｍａｓ－　ＢＦ４",
+      "quantity": 1,
+      "price": 4950,
+      "currency": "JPY",
+      "kind": "亚克力色纸",
+      "platform": "JCS",
+      "payment": "コンビニ前払い",
+      "shipping": "",
+      "orderDate": "2026-11-04",
+      "shipDate": "2027年04月下旬予定"
+    },
+    {
       "id": "cc72fbd4-59a7-4426-871c-7581e08e507c",
       "image": "images/uploads/1794198005129-53ff2814eac75470.jpg",
       "received": false,
