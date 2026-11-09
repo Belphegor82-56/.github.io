@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "07cc8701-9f32-4fa4-bd08-bbf5a3fe03b2",
+      "image": "images/uploads/1794198719658-ac0604608639bb71.jpg",
+      "received": false,
+      "work": "BLEACH",
+      "version": "アクリルパズルコレクション　第2弾　（全12組／ランダム1組入り）",
+      "quantity": 10,
+      "price": 770,
+      "currency": "JPY",
+      "kind": "亚克力",
+      "platform": "JUMP SHOPオンライン",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-11-06",
+      "shipDate": "1～2週間以内"
+    },
+    {
       "id": "a34576cf-96da-48fa-be60-09805cfb245e",
       "image": "images/uploads/1794198183886-15284d695e2322ea.jpg",
       "received": false,
