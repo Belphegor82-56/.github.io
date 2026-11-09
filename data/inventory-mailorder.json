@@ -1091,18 +1091,18 @@
     {
       "id": "excel-通贩-65",
       "image": "",
+      "received": false,
       "work": "家庭教師ヒットマンREBORN!",
       "version": "ねんどろいど 六道骸 10年後Ver.",
-      "quantity": "1",
-      "price": "7200",
+      "quantity": 1,
+      "price": 6480,
       "currency": "JPY",
       "kind": "手办",
-      "platform": "GSC",
-      "shipping": "配送",
-      "orderDate": "2026-10-14",
-      "shipDate": "2026 12月",
+      "platform": "アニメイト",
       "payment": "PayPal",
-      "received": false
+      "shipping": "店舗受取",
+      "orderDate": "2026-11-07",
+      "shipDate": "2026 12月中"
     },
     {
       "id": "excel-通贩-66",
