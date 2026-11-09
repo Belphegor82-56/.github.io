@@ -161,22 +161,6 @@
       "shipDate": "2026年11月 中"
     },
     {
-      "id": "excel-通贩-9",
-      "image": "",
-      "work": "Collar×Malice",
-      "version": "リボンver. アクリルスタンド06 白石景之",
-      "quantity": "1",
-      "price": "1870",
-      "currency": "JPY",
-      "kind": "立牌",
-      "platform": "ステラワース",
-      "shipping": "配送",
-      "orderDate": "",
-      "shipDate": "2026-11-01",
-      "payment": "ATM決済(ペイジー)",
-      "received": false
-    },
-    {
       "id": "excel-通贩-10",
       "image": "",
       "work": "Collar×Malice",
