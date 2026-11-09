@@ -906,14 +906,19 @@ function readDreamRecords() {
   } catch (error) { console.error(error); return []; }
 }
 let dreamCloudSaving = false;
+function dreamCloudAuthorized() {
+  return cloudDreamRecords !== null && window.annsCloud?.isAdmin() === true;
+}
 function dreamCloudAdmin() {
-  return cloudDreamRecords !== null && !dreamCloudSaving && window.annsCloud?.isAdmin() === true;
+  return dreamCloudAuthorized() && !dreamCloudSaving;
 }
 function refreshDreamCloudAccess() {
-  const allowed = dreamCloudAdmin();
-  document.body.classList.toggle('dream-cloud-admin',allowed);
-  document.getElementById('dream-add').disabled = !allowed;
-  if (!allowed) dreamForm.hidden = true;
+  const authorized = dreamCloudAuthorized();
+  document.body.classList.toggle('dream-cloud-admin',authorized);
+  document.getElementById('dream-add').disabled = !authorized || dreamCloudSaving;
+  if (!authorized) dreamForm.hidden = true;
+  const submit = dreamForm.querySelector('button[type="submit"],input[type="submit"]');
+  if (submit) submit.disabled = !authorized || dreamCloudSaving;
 }
 // Shared, non-blocking feedback for cloud saves.
 function showCloudSaveStatus(message, state = 'saving') {
@@ -1099,7 +1104,8 @@ function readInventory(category) {
 let inventoryCloudReady = false;
 let inventorySaving = false;
 const inventoryCloudPaths = {'卡带':'data/inventory-cards.json','通贩':'data/inventory-mailorder.json','中古':'data/inventory-secondhand.json'};
-function inventoryAdmin() { return inventoryCloudReady && !inventorySaving && window.annsCloud?.isAdmin() === true; }
+function inventoryAuthorized() { return inventoryCloudReady && window.annsCloud?.isAdmin() === true; }
+function inventoryAdmin() { return inventoryAuthorized() && !inventorySaving; }
 function inventoryImageUrl(value) { return typeof value === 'string' && value.startsWith('images/uploads/') ? value : (value || ''); }
 async function saveInventory(category, records) {
   if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
@@ -1129,10 +1135,11 @@ async function saveInventory(category, records) {
   } finally { inventorySaving = false; refreshInventoryAccess(); }
 }
 function refreshInventoryAccess() {
-  const allowed = inventoryAdmin();
-  document.body.classList.toggle('inventory-cloud-admin',allowed);
-  document.getElementById('inventory-add').disabled = !allowed;
-  if (!allowed) inventoryForm.hidden = true;
+  const authorized = inventoryAuthorized();
+  document.body.classList.toggle('inventory-cloud-admin',authorized);
+  document.getElementById('inventory-add').disabled = !authorized || inventorySaving;
+  if (!authorized) inventoryForm.hidden = true;
+  inventoryBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || inventorySaving);
 }
 function openInventoryForm(record = null) {
   inventoryForm.reset();
@@ -1449,16 +1456,21 @@ function renderInventory(category) {
       } catch (error) { console.error(error); return []; }
     }
     let groupCloudSaving = false;
+    function groupCloudAuthorized() {
+      return cloudGroupOrders !== null && window.annsCloud?.isAdmin() === true;
+    }
     function groupCloudAdmin() {
-      return cloudGroupOrders !== null && !groupCloudSaving && window.annsCloud?.isAdmin() === true;
+      return groupCloudAuthorized() && !groupCloudSaving;
     }
     function refreshGroupCloudAccess() {
-      const allowed = groupCloudAdmin();
-      document.body.classList.toggle('group-cloud-admin',allowed);
-      document.getElementById('group-order-add').disabled = !allowed;
-      if (!allowed) groupOrderForm.hidden = true;
+      const authorized = groupCloudAuthorized();
+      document.body.classList.toggle('group-cloud-admin',authorized);
+      document.getElementById('group-order-add').disabled = !authorized || groupCloudSaving;
+      if (!authorized) groupOrderForm.hidden = true;
+      const submit = groupOrderForm.querySelector('button[type="submit"],input[type="submit"]');
+      if (submit) submit.disabled = !authorized || groupCloudSaving;
       if (decodeURIComponent(location.hash.slice(1)) === '群排') {
-        groupOrderBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !allowed);
+        groupOrderBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || groupCloudSaving);
       }
     }
     async function saveGroupOrders(records) {
