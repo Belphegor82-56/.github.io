@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "b4606d30-c27c-4c33-a748-6b57dd54a98a",
+      "image": "",
+      "received": false,
+      "work": "家庭教師ヒットマンREBORN!",
+      "version": "ねんどろいど 六道骸 2.0",
+      "quantity": 1,
+      "price": 6285,
+      "currency": "JPY",
+      "kind": "手办",
+      "platform": "骏河屋",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-07",
+      "shipDate": ""
+    },
+    {
       "id": "excel-中古-2",
       "image": "",
       "work": "古書店街の橋姫",
