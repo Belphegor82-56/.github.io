@@ -915,9 +915,27 @@ function refreshDreamCloudAccess() {
   document.getElementById('dream-add').disabled = !allowed;
   if (!allowed) dreamForm.hidden = true;
 }
+// Shared, non-blocking feedback for cloud saves.
+function showCloudSaveStatus(message, state = 'saving') {
+  let node = document.getElementById('cloud-save-status');
+  if (!node) {
+    node = document.createElement('div');
+    node.id = 'cloud-save-status';
+    node.setAttribute('role','status');
+    node.setAttribute('aria-live','polite');
+    node.style.cssText = 'position:fixed;z-index:99999;left:50%;bottom:22px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:#242424;color:#fff;font-size:14px;box-shadow:0 4px 18px #0003;opacity:0;transition:opacity .18s;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(node);
+  }
+  node.textContent = message;
+  node.style.background = state === 'error' ? '#9b2c2c' : (state === 'success' ? '#246b45' : '#242424');
+  node.style.opacity = '1';
+  if (node._hideTimer) clearTimeout(node._hideTimer);
+  if (state !== 'saving') node._hideTimer = setTimeout(() => { node.style.opacity = '0'; }, 1800);
+}
 async function saveDreamRecords(records) {
   if (!dreamCloudAdmin()) { alert('请先登录管理员，并等待梦情云端数据加载完成。'); return false; }
   dreamCloudSaving = true;
+  showCloudSaveStatus('正在保存云端…');
   refreshDreamCloudAccess();
   try {
     const prepared = records.map(record => ({...record}));
@@ -932,8 +950,10 @@ async function saveDreamRecords(records) {
     const result = await window.annsCloud.request('/publish-collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:'梦情',entries:prepared})});
     if (!result.ok) throw new Error('GitHub 保存失败');
     cloudDreamRecords = prepared;
+    showCloudSaveStatus('梦情已保存', 'success');
     return true;
   } catch(error) {
+    showCloudSaveStatus('保存失败，请检查网络后重试', 'error');
     console.error('Dream cloud save failed:',error);
     alert('梦情云端保存失败：' + error.message);
     return false;
@@ -1084,6 +1104,7 @@ function inventoryImageUrl(value) { return typeof value === 'string' && value.st
 async function saveInventory(category, records) {
   if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
   inventorySaving = true;
+  showCloudSaveStatus('正在保存云端…');
   refreshInventoryAccess();
   try {
     const prepared = records.map(record => ({...record}));
@@ -1098,8 +1119,10 @@ async function saveInventory(category, records) {
     const result = await window.annsCloud.request('/publish-collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,entries:prepared})});
     if (!result.ok) throw new Error('GitHub 保存失败');
     cloudInventory[category] = prepared;
+    showCloudSaveStatus('收藏记录已保存', 'success');
     return true;
   } catch(error) {
+    showCloudSaveStatus('保存失败，请检查网络后重试', 'error');
     console.error('Cloud save failed:',error);
     alert('云端保存失败：' + error.message + '。原有云端记录未在网页中替换，请重试。');
     return false;
@@ -1441,6 +1464,7 @@ function renderInventory(category) {
     async function saveGroupOrders(records) {
       if (!groupCloudAdmin()) { alert('请先登录管理员并等待群排云端数据加载完成'); return false; }
       groupCloudSaving = true;
+      showCloudSaveStatus('正在保存云端…');
       refreshGroupCloudAccess();
       try {
         const prepared = records.map(item => ({...item}));
@@ -1458,8 +1482,10 @@ function renderInventory(category) {
         });
         if (!result.ok) throw new Error('GitHub 保存失败');
         cloudGroupOrders = prepared;
+        showCloudSaveStatus('群排已保存', 'success');
         return true;
       } catch(error) {
+        showCloudSaveStatus('保存失败，请检查网络后重试', 'error');
         console.error('Group order cloud save failed:',error);
         alert('群排云端保存失败：'+error.message);
         return false;
