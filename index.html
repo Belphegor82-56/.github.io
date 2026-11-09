@@ -1139,6 +1139,8 @@ function refreshInventoryAccess() {
   document.body.classList.toggle('inventory-cloud-admin',authorized);
   document.getElementById('inventory-add').disabled = !authorized || inventorySaving;
   if (!authorized) inventoryForm.hidden = true;
+  const submit = inventoryForm.querySelector('button[type="submit"],input[type="submit"]');
+  if (submit) submit.disabled = !authorized || inventorySaving;
   inventoryBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || inventorySaving);
 }
 function openInventoryForm(record = null) {
