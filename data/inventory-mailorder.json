@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "cc72fbd4-59a7-4426-871c-7581e08e507c",
+      "image": "images/uploads/1794198005129-53ff2814eac75470.jpg",
+      "received": false,
+      "work": "ファントムバスターズ",
+      "version": "フォトメモリーズコレクション　第１弾　（全８種／ランダム１種入り）　ＢＦ４",
+      "quantity": 8,
+      "price": 550,
+      "currency": "JPY",
+      "kind": "纸片",
+      "platform": "JCS",
+      "payment": "コンビニ前払い",
+      "shipping": "配送 杨主任家",
+      "orderDate": "2026-11-04",
+      "shipDate": "2027年04月下旬予定"
+    },
+    {
       "id": "42dfc40b-0f74-43eb-b368-a9efd88aaa62",
       "image": "images/uploads/1793844194632-68a513a2af15242c.jpg",
       "received": false,
