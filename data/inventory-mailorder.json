@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "a34576cf-96da-48fa-be60-09805cfb245e",
+      "image": "images/uploads/1794198183886-15284d695e2322ea.jpg",
+      "received": false,
+      "work": "ファントムバスターズ",
+      "version": "アクリルｍｉｎｉブロックＥｘ　観崎薫　ＢＦ４",
+      "quantity": 1,
+      "price": 1100,
+      "currency": "JPY",
+      "kind": "亚克力",
+      "platform": "JCS",
+      "payment": "コンビニ前払い",
+      "shipping": "配送（杨主任家）",
+      "orderDate": "2026-11-04",
+      "shipDate": "2027年04月下旬予定"
+    },
+    {
       "id": "0a4046dc-1384-482d-aebc-a9be3593b4b5",
       "image": "images/uploads/1794198134301-0de8a65001dfeebf.jpg",
       "received": false,
