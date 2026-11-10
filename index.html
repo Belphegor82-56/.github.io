@@ -32,12 +32,12 @@
            width: 80%; max-width: 600px; min-height: 150px; height: auto;}
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
-  .archive-card {margin-top: 26px;background: #ffffff;border-radius: 15px;padding: 25px;box-shadow: 0 3px 12px #00000010;width: 80%;max-width: 600px;}
-  .archive-card img {width: 100%; height: auto; border-radius: 12px; margin-top: 12px;}
+  .archive-card {box-sizing: border-box;margin: 18px 0;background: #ffffff;border-radius: 12px;padding: 18px;box-shadow: 0 3px 12px #00000010;width: 100%;max-width: 520px;}
+  .archive-card img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;border-radius: 10px;margin: 12px auto 0;}
   .archive-card h3 {font-weight: 500;}
   .archive-card p {line-height: 1.8;}
   .archive-entry-body {line-height: 1.8; overflow-wrap: anywhere;}
-  .archive-entry-body img {max-width: 100%; height: auto;}
+  .archive-entry-body img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;margin: 12px auto;}
     #archive-editor {
   margin-top: 25px;
   padding: 25px;
@@ -556,7 +556,7 @@
   <button type="button" id="heading-btn">H2</button>
   <button type="button" id="paragraph-btn">P</button>
   <button type="button" id="insert-image-btn">📷</button>
-  <input type="file" id="inline-image-input" accept="image/*" hidden>
+  <input type="file" id="inline-image-input" accept="image/*" multiple hidden>
  </div>
 
  <div id="archive-description"
@@ -819,23 +819,12 @@ insertImageBtn.addEventListener('click', () => {
   inlineImageInput.click();
 });
 
-// 选择图片后插入正文
+// 可一次选择多张图片，并按选择顺序插入正文
 inlineImageInput.addEventListener('change', () => {
-  const file = inlineImageInput.files[0];
-  if (!file) return;
-
-  const imageUrl = URL.createObjectURL(file);
-
-  const img = document.createElement('img');
-  img.src = imageUrl;
-  img.alt = file.name;
-  img.style.maxWidth = '100%';
-  img.style.height = 'auto';
-  img.style.display = 'block';
-  img.style.margin = '20px 0';
+  const files = [...inlineImageInput.files].filter(file => file.type.startsWith('image/'));
+  if (!files.length) return;
 
   richEditor.focus();
-
   const selection = window.getSelection();
   const range = savedRange && richEditor.contains(savedRange.commonAncestorContainer)
     ? savedRange
@@ -845,15 +834,25 @@ inlineImageInput.addEventListener('change', () => {
     range.selectNodeContents(richEditor);
     range.collapse(false);
   }
-
   range.deleteContents();
-  range.insertNode(img);
-  range.setStartAfter(img);
-  range.collapse(true);
+
+  files.forEach((file, index) => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = file.name;
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '260px';
+    img.style.height = 'auto';
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
+    img.style.margin = '16px auto';
+    range.insertNode(img);
+    range.setStartAfter(img);
+    range.collapse(true);
+  });
 
   selection.removeAllRanges();
   selection.addRange(range);
-
   savedRange = range.cloneRange();
   inlineImageInput.value = '';
 });
