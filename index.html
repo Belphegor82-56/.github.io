@@ -45,6 +45,10 @@
   .archive-card p {line-height: 1.8;}
   .archive-entry-body {line-height: 1.8; overflow-wrap: anywhere;}
   .archive-entry-body img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;margin: 12px auto;}
+    .archive-current-images {margin:14px 0;padding:12px;background:#f7f7f5;border-radius:9px;}
+.archive-current-images p {margin:0 0 8px;font-size:13px;color:#666;}
+#archive-current-images-list {display:flex;flex-wrap:wrap;gap:8px;}
+#archive-current-images-list img {width:88px;height:72px;object-fit:cover;border-radius:6px;}
     #archive-editor {
   margin-top: 25px;
   padding: 25px;
@@ -576,6 +580,11 @@
      data-placeholder="在这里写下你的旅行故事...">
  </div>
 
+    <div id="archive-current-images" class="archive-current-images" hidden>
+      <p>这篇日记已保存的图片（保存时会保留）：</p>
+      <div id="archive-current-images-list"></div>
+    </div>
+    <label for="archive-images">添加更多图片（可多选）</label>
     <input id="archive-images" type="file" accept="image/*" multiple>
 
     <button id="archive-save-btn" type="button">保存</button>
@@ -601,6 +610,9 @@
     const addArchiveBtn = document.getElementById('add-archive-btn');
     const archiveEditor = document.getElementById('archive-editor');
     const archiveTitleInput = document.getElementById('archive-title');
+    const archiveCurrentImages = document.getElementById('archive-current-images');
+    const archiveCurrentImagesList = document.getElementById('archive-current-images-list');
+    const archiveEditorHeading = archiveEditor.querySelector('h3');
     const archiveCancelBtn = document.getElementById('archive-cancel-btn');
     const archiveSaveBtn = document.getElementById('archive-save-btn');
     
@@ -689,11 +701,24 @@
       return;
     }
     editingArchiveId = record ? record.id : null;
-    archiveTitleInput.value = record ? record.title : '';
-    richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.body || record.description).replace(/\n/g, '<br>')) : '';
+    archiveEditorHeading.textContent = record ? '编辑这篇旅行日记' : '新建旅行日记';
+    archiveSaveBtn.textContent = record ? '保存修改' : '发布日记';
+    archiveTitleInput.value = record ? (record.title || '') : '';
+    richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.body || record.description || '').replace(/\n/g, '<br>')) : '';
     archiveImagesInput.value = '';
+    archiveCurrentImagesList.replaceChildren();
+    const existingImages = record && Array.isArray(record.images) ? record.images : [];
+    archiveCurrentImages.hidden = existingImages.length === 0;
+    existingImages.forEach(src => {
+      const image = document.createElement('img');
+      image.src = src;
+      image.alt = '已保存的旅行照片';
+      image.loading = 'lazy';
+      archiveCurrentImagesList.appendChild(image);
+    });
     savedRange = null;
     archiveEditor.hidden = false;
+    archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
   }
   function escapeArchiveHtml(value) {
