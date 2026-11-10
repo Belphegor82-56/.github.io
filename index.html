@@ -661,6 +661,7 @@
   }
   function normalizeArchive(record) {
     return {
+      ...record,
       id: record.id || archiveId(),
       title: record.title || '',
       description: record.description || '',
@@ -676,6 +677,10 @@
     inlineImageInput.value = '';
   }
   function openArchiveEditor(record = null) {
+    if (window.annsCloud?.isAdmin() !== true) {
+      alert('请先登录管理员。');
+      return;
+    }
     editingArchiveId = record ? record.id : null;
     archiveTitleInput.value = record ? record.title : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
@@ -691,6 +696,9 @@
   }
   function renderArchive(year) {
     archiveList.replaceChildren();
+    const isAdmin = window.annsCloud?.isAdmin() === true;
+    addArchiveBtn.hidden = !isAdmin;
+    if (!isAdmin && !archiveEditor.hidden) closeArchiveEditor();
     if (!archiveRecords.length) {
       archiveList.textContent = year + ' 年还没有旅行记录。';
       return;
@@ -744,14 +752,28 @@
         editBtn.type = 'button';
         editBtn.textContent = '编辑';
         editBtn.addEventListener('click', () => {
-          location.href = new URL('admin/', location.href).href;
+          if (window.annsCloud?.isAdmin() === true) openArchiveEditor(record);
         });
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.textContent = '删除';
-        deleteBtn.addEventListener('click', () => {
-          if (!confirm('将进入旅行日记管理页面，在对应年份的记录列表中删除这篇日记。现在前往管理页面吗？')) return;
-          location.href = new URL('admin/', location.href).href;
+        deleteBtn.addEventListener('click', async () => {
+          if (window.annsCloud?.isAdmin() !== true) return;
+          if (!confirm('确定从 ' + year + ' 年旅行日记中删除「' + (record.title || '未命名旅行') + '」吗？此操作会同步保存到 GitHub。')) return;
+          deleteBtn.disabled = true;
+          try {
+            const next = archiveRecords.filter(item => item.id !== record.id);
+            await publishArchiveToCloud(year, next);
+            archiveRecords = next;
+            if (editingArchiveId === record.id) closeArchiveEditor();
+            renderArchive(year);
+            showArchiveSaveMessage('已从 GitHub 删除这篇旅行记录。');
+          } catch (error) {
+            console.error('删除旅行记录失败：', error);
+            alert('删除失败：' + error.message);
+          } finally {
+            deleteBtn.disabled = false;
+          }
         });
         actions.append(editBtn, deleteBtn);
         card.appendChild(actions);
@@ -785,14 +807,97 @@
       reader.readAsDataURL(file);
     });
   }
-  async function persistInlineImages() {
-    const imgs = [...richEditor.querySelectorAll('img')];
-    for (const img of imgs) {
-      if (!img.src.startsWith('blob:')) continue;
-      const response = await fetch(img.src);
-      const blob = await response.blob();
-      img.src = await readFileAsDataURL(blob);
+  async function uploadArchiveBlob(blob) {
+    if (!blob || !/^image\\/(jpeg|png|webp|gif)$/i.test(blob.type)) {
+      throw new Error('图片格式仅支持 JPEG、PNG、WebP 或 GIF。');
     }
+    const result = await window.annsCloud.request('/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type },
+      body: blob
+    });
+    if (!result.path) throw new Error('图片上传后没有收到 GitHub 路径。');
+    return result.path;
+  }
+  function normalizeArchiveImagePath(value) {
+    if (typeof value !== 'string' || !value) throw new Error('发现无效的旅行图片路径。');
+    let pathname = value;
+    try {
+      if (/^https?:\\/\\//i.test(value)) pathname = new URL(value).pathname;
+    } catch (_) {}
+    pathname = pathname.replace(/^\\/?\\.github\\.io\\//, '').replace(/^\\//, '');
+    if (!/^images\\/uploads\\/[a-zA-Z0-9._/-]+$/.test(pathname)) {
+      throw new Error('图片路径不是网站上传目录中的文件：' + value);
+    }
+    return pathname;
+  }
+  async function prepareArchiveHtml(html) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html || '';
+    for (const img of wrapper.querySelectorAll('img')) {
+      const src = img.getAttribute('src') || '';
+      if (/^(blob:|data:image\\/)/i.test(src)) {
+        const blob = await fetch(src).then(response => {
+          if (!response.ok) throw new Error('无法读取正文中的图片。');
+          return response.blob();
+        });
+        img.setAttribute('src', await uploadArchiveBlob(blob));
+      } else if (src) {
+        try {
+          const parsed = new URL(src, location.href);
+          if (parsed.origin === location.origin && /(?:^|\\/)images\\/uploads\\//.test(parsed.pathname)) {
+            img.setAttribute('src', normalizeArchiveImagePath(parsed.pathname));
+          }
+        } catch (_) {}
+      }
+    }
+    return wrapper.innerHTML;
+  }
+  async function prepareArchiveEntries(records) {
+    const prepared = [];
+    for (const source of records) {
+      const record = { ...source };
+      record.id = String(record.id || archiveId());
+      record.title = String(record.title || '');
+      record.html = await prepareArchiveHtml(record.html || '');
+      const images = [];
+      for (const src of (Array.isArray(record.images) ? record.images : [])) {
+        if (typeof src === 'string' && /^(blob:|data:image\\/)/i.test(src)) {
+          const blob = await fetch(src).then(response => {
+            if (!response.ok) throw new Error('无法读取附图。');
+            return response.blob();
+          });
+          images.push(await uploadArchiveBlob(blob));
+        } else {
+          images.push(normalizeArchiveImagePath(src));
+        }
+      }
+      record.images = images;
+      prepared.push(record);
+    }
+    return prepared;
+  }
+  function showArchiveSaveMessage(message) {
+    let status = document.getElementById('archive-save-status');
+    if (!status) {
+      status = document.createElement('p');
+      status.id = 'archive-save-status';
+      status.setAttribute('role', 'status');
+      status.style.cssText = 'margin:12px 0;color:#66806a;font-size:13px;';
+      archiveEditor.insertBefore(status, archiveSaveBtn);
+    }
+    status.textContent = message;
+  }
+  async function publishArchiveToCloud(year, records) {
+    if (window.annsCloud?.isAdmin() !== true) throw new Error('管理员登录状态已失效，请重新登录。');
+    const entries = await prepareArchiveEntries(records);
+    const result = await window.annsCloud.request('/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: String(year), entries })
+    });
+    if (!result.ok) throw new Error('GitHub 未确认保存成功。');
+    return entries;
   }
     function formatText(command, value = null) {richEditor.focus();document.execCommand(command, false, value);}
     boldBtn.addEventListener('click', () => {formatText('bold');});
@@ -865,28 +970,39 @@ archiveCancelBtn.addEventListener('click', closeArchiveEditor);
 archiveSaveBtn.addEventListener('click', async () => {
   const year = activeArchiveYear;
   if (!year) return;
+  if (window.annsCloud?.isAdmin() !== true) {
+    alert('请先登录管理员。');
+    return;
+  }
   archiveSaveBtn.disabled = true;
+  const originalLabel = archiveSaveBtn.textContent;
+  archiveSaveBtn.textContent = '正在上传并保存…';
   try {
-    await persistInlineImages();
-    const images = await Promise.all([...archiveImagesInput.files].map(readFileAsDataURL));
     const old = archiveRecords.find(item => item.id === editingArchiveId);
+    const newImagePaths = [];
+    for (const file of [...archiveImagesInput.files]) {
+      newImagePaths.push(await uploadArchiveBlob(file));
+    }
     const record = {
+      ...(old || {}),
       id: old ? old.id : archiveId(),
       title: archiveTitleInput.value.trim(),
       description: richEditor.innerText,
       html: richEditor.innerHTML,
-      images: [...(old ? old.images : []), ...images]
+      images: [...(old && Array.isArray(old.images) ? old.images : []), ...newImagePaths]
     };
     const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
-    if (!persistArchive(year, next)) return;
-    archiveRecords = next;
+    const published = await publishArchiveToCloud(year, next);
+    archiveRecords = published.map(normalizeArchive);
     closeArchiveEditor();
     renderArchive(year);
+    showArchiveSaveMessage('已保存到 GitHub。');
   } catch (error) {
-    console.error(error);
-    alert('保存失败，请检查所选图片后重试。');
+    console.error('保存旅行记录失败：', error);
+    alert('保存失败：' + error.message);
   } finally {
     archiveSaveBtn.disabled = false;
+    archiveSaveBtn.textContent = originalLabel;
   }
 });
 
