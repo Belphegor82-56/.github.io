@@ -107,7 +107,7 @@
       "image": "images/uploads/1794199002925-0f8ec5114b2f7541.jpg",
       "received": false,
       "queued": true,
-      "paid": false,
+      "paid": true,
       "shippable": false,
       "work": "",
       "version": "",
