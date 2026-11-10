@@ -103,9 +103,10 @@
     
 .archive-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 25px;
-  padding-top: 15px;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
   border-top: 1px solid #e4dfd8;
 }
 
@@ -735,25 +736,26 @@
         link.appendChild(img);
         card.appendChild(link);
       });
-      const actions = document.createElement('div');
-      actions.className = 'archive-actions';
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.textContent = '编辑';
-      editBtn.addEventListener('click', () => openArchiveEditor(record));
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.textContent = '删除';
-      deleteBtn.addEventListener('click', () => {
-        if (!confirm('确定删除这条旅行记录吗？')) return;
-        const next = archiveRecords.filter(item => item.id !== record.id);
-        if (!persistArchive(year, next)) return;
-        archiveRecords = next;
-        if (editingArchiveId === record.id) closeArchiveEditor();
-        renderArchive(year);
-      });
-      actions.append(editBtn, deleteBtn);
-      // Public travel diary is read-only; publishing is managed through /admin/.
+      // 只有通过 Cloudflare Worker 验证的管理员才会看到管理入口。
+      if (window.annsCloud?.isAdmin() === true) {
+        const actions = document.createElement('div');
+        actions.className = 'archive-actions';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = '编辑';
+        editBtn.addEventListener('click', () => {
+          location.href = new URL('admin/', location.href).href;
+        });
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = '删除';
+        deleteBtn.addEventListener('click', () => {
+          if (!confirm('将进入旅行日记管理页面，在对应年份的记录列表中删除这篇日记。现在前往管理页面吗？')) return;
+          location.href = new URL('admin/', location.href).href;
+        });
+        actions.append(editBtn, deleteBtn);
+        card.appendChild(actions);
+      }
       archiveList.appendChild(card);
     });
   }
@@ -1707,7 +1709,11 @@ function renderInventory(category) {
       }
     }
     loadCloudGroupOrders();
-    window.addEventListener('anns-admin-ready',() => { if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders(); refreshGroupCloudAccess(); });
+    window.addEventListener('anns-admin-ready',() => {
+      if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders();
+      if (archiveYears.includes(decodeURIComponent(location.hash.slice(1)))) renderArchive(decodeURIComponent(location.hash.slice(1)));
+      refreshGroupCloudAccess();
+    });
     refreshGroupCloudAccess();
 
     window.addEventListener('hashchange', updatePage);
