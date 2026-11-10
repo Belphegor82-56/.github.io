@@ -109,15 +109,15 @@
       "queued": true,
       "paid": true,
       "shippable": false,
-      "work": "",
-      "version": "",
-      "quantity": "",
-      "price": "",
-      "currency": "JPY",
-      "groupName": "",
-      "platform": "",
+      "work": "ハイキュー",
+      "version": "挑戦者たち　展",
+      "quantity": 1,
+      "price": 172,
+      "currency": "CNY",
+      "groupName": "原画展一次性",
+      "platform": "微信",
       "kind": "亚克力",
-      "notes": ""
+      "notes": "11/9场贩"
     },
     {
       "id": "4e4bf37c-25cb-4e18-a9df-f0c077f9cbb5",
