@@ -683,7 +683,7 @@
     }
     editingArchiveId = record ? record.id : null;
     archiveTitleInput.value = record ? record.title : '';
-    richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.description).replace(/\n/g, '<br>')) : '';
+    richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.body || record.description).replace(/\n/g, '<br>')) : '';
     archiveImagesInput.value = '';
     savedRange = null;
     archiveEditor.hidden = false;
@@ -884,7 +884,7 @@
       status.id = 'archive-save-status';
       status.setAttribute('role', 'status');
       status.style.cssText = 'margin:12px 0;color:#66806a;font-size:13px;';
-      archiveEditor.insertBefore(status, archiveSaveBtn);
+      archiveContent.insertBefore(status, archiveList);
     }
     status.textContent = message;
   }
@@ -991,6 +991,7 @@ archiveSaveBtn.addEventListener('click', async () => {
       html: richEditor.innerHTML,
       images: [...(old && Array.isArray(old.images) ? old.images : []), ...newImagePaths]
     };
+    delete record.body;
     const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
     const published = await publishArchiveToCloud(year, next);
     archiveRecords = published.map(normalizeArchive);
