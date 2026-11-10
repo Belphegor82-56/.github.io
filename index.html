@@ -808,7 +808,7 @@
     });
   }
   async function uploadArchiveBlob(blob) {
-    if (!blob || !/^image\\/(jpeg|png|webp|gif)$/i.test(blob.type)) {
+    if (!blob || !/^image\/(jpeg|png|webp|gif)$/i.test(blob.type)) {
       throw new Error('图片格式仅支持 JPEG、PNG、WebP 或 GIF。');
     }
     const result = await window.annsCloud.request('/upload', {
@@ -823,10 +823,10 @@
     if (typeof value !== 'string' || !value) throw new Error('发现无效的旅行图片路径。');
     let pathname = value;
     try {
-      if (/^https?:\\/\\//i.test(value)) pathname = new URL(value).pathname;
+      if (/^https?:\/\//i.test(value)) pathname = new URL(value).pathname;
     } catch (_) {}
-    pathname = pathname.replace(/^\\/?\\.github\\.io\\//, '').replace(/^\\//, '');
-    if (!/^images\\/uploads\\/[a-zA-Z0-9._/-]+$/.test(pathname)) {
+    pathname = pathname.replace(/^\/?\.github\.io\//, '').replace(/^\//, '');
+    if (!/^images\/uploads\/[a-zA-Z0-9._/-]+$/.test(pathname)) {
       throw new Error('图片路径不是网站上传目录中的文件：' + value);
     }
     return pathname;
@@ -836,7 +836,7 @@
     wrapper.innerHTML = html || '';
     for (const img of wrapper.querySelectorAll('img')) {
       const src = img.getAttribute('src') || '';
-      if (/^(blob:|data:image\\/)/i.test(src)) {
+      if (/^(blob:|data:image\/)/i.test(src)) {
         const blob = await fetch(src).then(response => {
           if (!response.ok) throw new Error('无法读取正文中的图片。');
           return response.blob();
@@ -845,7 +845,7 @@
       } else if (src) {
         try {
           const parsed = new URL(src, location.href);
-          if (parsed.origin === location.origin && /(?:^|\\/)images\\/uploads\\//.test(parsed.pathname)) {
+          if (parsed.origin === location.origin && /(?:^|\/)images\/uploads\//.test(parsed.pathname)) {
             img.setAttribute('src', normalizeArchiveImagePath(parsed.pathname));
           }
         } catch (_) {}
@@ -862,7 +862,7 @@
       record.html = await prepareArchiveHtml(record.html || '');
       const images = [];
       for (const src of (Array.isArray(record.images) ? record.images : [])) {
-        if (typeof src === 'string' && /^(blob:|data:image\\/)/i.test(src)) {
+        if (typeof src === 'string' && /^(blob:|data:image\/)/i.test(src)) {
           const blob = await fetch(src).then(response => {
             if (!response.ok) throw new Error('无法读取附图。');
             return response.blob();
