@@ -34,6 +34,13 @@
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
   .archive-card {box-sizing: border-box;margin: 18px 0;background: #ffffff;border-radius: 12px;padding: 18px;box-shadow: 0 3px 12px #00000010;width: 100%;max-width: 520px;}
   .archive-card img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;border-radius: 10px;margin: 12px auto 0;}
+  .archive-gallery {width:100%;max-width:100%;margin:12px auto 0;position:relative;overflow:hidden;}
+  .archive-gallery-link {display:flex;align-items:center;justify-content:center;width:100%;min-height:100px;}
+  .archive-card .archive-gallery-image {display:block;width:auto;max-width:100%;max-height:260px;height:auto;object-fit:contain;border-radius:10px;margin:0 auto;}
+  .archive-gallery-controls {display:flex;align-items:center;justify-content:center;gap:18px;margin-top:8px;}
+  .archive-gallery-arrow {width:34px;height:30px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#444;font-size:24px;line-height:20px;cursor:pointer;}
+  .archive-gallery-arrow:hover {background:#e2eaf0;}
+  .archive-gallery-counter {min-width:42px;text-align:center;color:#777;font-size:12px;font-variant-numeric:tabular-nums;}
   .archive-card h3 {font-weight: 500;}
   .archive-card p {line-height: 1.8;}
   .archive-entry-body {line-height: 1.8; overflow-wrap: anywhere;}
@@ -730,20 +737,72 @@
         body.style.whiteSpace = 'pre-wrap';
       }
       card.appendChild(body);
-      (record.images || []).forEach(src => {
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = record.title || '旅行照片';
-        img.loading = 'lazy';
-        img.style.cursor = 'zoom-in';
-        const link = document.createElement('a');
-        link.href = src;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.title = '打开原图，可在新页面保存';
-        link.appendChild(img);
-        card.appendChild(link);
-      });
+      const galleryImages = Array.isArray(record.images) ? record.images : [];
+      if (galleryImages.length) {
+        const gallery = document.createElement('div');
+        gallery.className = 'archive-gallery';
+        let galleryIndex = 0;
+        const imageLink = document.createElement('a');
+        imageLink.className = 'archive-gallery-link';
+        imageLink.target = '_blank';
+        imageLink.rel = 'noopener noreferrer';
+        imageLink.title = '打开原图';
+        const galleryImg = document.createElement('img');
+        galleryImg.className = 'archive-gallery-image';
+        galleryImg.alt = record.title || '旅行照片';
+        galleryImg.loading = 'lazy';
+        imageLink.appendChild(galleryImg);
+        gallery.appendChild(imageLink);
+        if (galleryImages.length > 1) {
+          const controls = document.createElement('div');
+          controls.className = 'archive-gallery-controls';
+          const previousBtn = document.createElement('button');
+          previousBtn.type = 'button';
+          previousBtn.className = 'archive-gallery-arrow';
+          previousBtn.textContent = '‹';
+          previousBtn.setAttribute('aria-label', '上一张图片');
+          const counter = document.createElement('span');
+          counter.className = 'archive-gallery-counter';
+          const nextBtn = document.createElement('button');
+          nextBtn.type = 'button';
+          nextBtn.className = 'archive-gallery-arrow';
+          nextBtn.textContent = '›';
+          nextBtn.setAttribute('aria-label', '下一张图片');
+          const showImage = () => {
+            const src = galleryImages[galleryIndex];
+            galleryImg.src = src;
+            imageLink.href = src;
+            counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
+          };
+          previousBtn.addEventListener('click', () => {
+            galleryIndex = (galleryIndex - 1 + galleryImages.length) % galleryImages.length;
+            showImage();
+          });
+          nextBtn.addEventListener('click', () => {
+            galleryIndex = (galleryIndex + 1) % galleryImages.length;
+            showImage();
+          });
+          controls.append(previousBtn, counter, nextBtn);
+          gallery.appendChild(controls);
+          let touchStartX = null;
+          gallery.addEventListener('touchstart', event => {
+            if (event.touches.length === 1) touchStartX = event.touches[0].clientX;
+          }, { passive: true });
+          gallery.addEventListener('touchend', event => {
+            if (touchStartX === null || !event.changedTouches.length) return;
+            const deltaX = event.changedTouches[0].clientX - touchStartX;
+            touchStartX = null;
+            if (Math.abs(deltaX) < 40) return;
+            galleryIndex = (galleryIndex + (deltaX < 0 ? 1 : -1) + galleryImages.length) % galleryImages.length;
+            showImage();
+          }, { passive: true });
+          showImage();
+        } else {
+          galleryImg.src = galleryImages[0];
+          imageLink.href = galleryImages[0];
+        }
+        card.appendChild(gallery);
+      }
       // 只有通过 Cloudflare Worker 验证的管理员才会看到管理入口。
       if (window.annsCloud?.isAdmin() === true) {
         const actions = document.createElement('div');
