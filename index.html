@@ -420,6 +420,9 @@
       overflow: hidden;
     }
     #dream-list .dream-card > img { margin-bottom: 12px; }
+    #dream-list .dream-image-wrap {position:relative;margin-bottom:12px;}
+    #dream-list .dream-image-wrap > img {display:block;width:100%;height:220px;object-fit:contain;margin-bottom:0;}
+    #dream-list .dream-received-mark {position:absolute;top:8px;left:8px;z-index:1;display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;background:#378451;color:#fff;font-size:12px;font-weight:600;box-shadow:0 2px 6px #0002;pointer-events:none;}
     #dream-list .dream-card > .dream-note { margin-bottom: 0; }
     #dream-list .dream-card > .dream-note { font-size: 15px; line-height: 1.65; }
     #dream-list .dream-card > .dream-actions {
@@ -1607,7 +1610,19 @@ function renderDreamCards() {
   records.forEach(record => {
     const card = document.createElement('article'); card.className = 'dream-card';
     if (record.image) {
-      const img = document.createElement('img'); img.src = record.image; img.alt = record.name || '收藏品图片'; card.appendChild(img);
+      const imageWrap = document.createElement('div');
+      imageWrap.className = 'dream-image-wrap';
+      const img = document.createElement('img');
+      img.src = record.image;
+      img.alt = record.name || '收藏品图片';
+      imageWrap.appendChild(img);
+      if (record.status === '收到') {
+        const mark = document.createElement('span');
+        mark.className = 'dream-received-mark';
+        mark.textContent = '✓ 已收到';
+        imageWrap.appendChild(mark);
+      }
+      card.appendChild(imageWrap);
     }
     const heading = document.createElement('h3'); heading.textContent = record.name; card.appendChild(heading);
     if (record.description) { const p = document.createElement('p'); p.textContent = record.description; card.appendChild(p); }
