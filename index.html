@@ -904,6 +904,15 @@
       console.info('未找到旅行记录文件，将使用空白记录', error);
       archiveRecords = [];
     }
+    // GitHub Pages 可能尚未发布；优先显示刷新前保存的本地草稿。
+    try {
+      const draft = await annsDraftStore.get('archive:'+year);
+      if (sequence !== archiveLoadSequence) return;
+      if (draft && Array.isArray(draft.entries)) {
+        archiveRecords = draft.entries.map(normalizeArchive);
+        showArchiveSaveMessage('已恢复本地草稿，尚未确认同步到 GitHub。');
+      }
+    } catch(error) { console.error('恢复旅行草稿失败',error); }
     renderArchive(year);
   }
   function readFileAsDataURL(file) {
@@ -1143,19 +1152,37 @@ archiveSaveBtn.addEventListener('click', async () => {
     };
     delete record.body;
     const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
-    archiveRecords = next;
+    // 将临时 blob 地址转换为可持久保存的图片数据。
+    const durableImages = await Promise.all(files.map(file => readFileAsDataURL(file)));
+    const durableWrapper = document.createElement('div');
+    durableWrapper.innerHTML = record.html;
+    for (const img of durableWrapper.querySelectorAll('img')) {
+      const src = img.getAttribute('src') || '';
+      if (src.startsWith('blob:')) {
+        const response = await fetch(src);
+        if (!response.ok) throw new Error('无法读取正文图片');
+        img.setAttribute('src', await readFileAsDataURL(new File([await response.blob()], 'photo.jpg')));
+      }
+    }
+    const durableRecord = {...record, images:[...(old && Array.isArray(old.images) ? old.images : []),...durableImages],html:durableWrapper.innerHTML};
+    const durableNext = old ? archiveRecords.map(item => item.id === old.id ? durableRecord : item) : [...archiveRecords, durableRecord];
+    await annsDraftStore.put('archive:'+year, {entries:durableNext,savedAt:Date.now()});
+    archiveRecords = durableNext;
     closeArchiveEditor();
     renderArchive(year);
-    showArchiveSaveMessage('已显示新记录，正在后台同步图片…');
-    const published = await publishArchiveToCloud(year, next);
+    showArchiveSaveMessage('已保存本地草稿，正在同步 GitHub…');
+    const published = await publishArchiveToCloud(year, durableNext);
     archiveRecords = published.map(normalizeArchive);
+    await annsDraftStore.remove('archive:'+year);
     renderArchive(year);
     showArchiveSaveMessage('已保存到 GitHub。');
   } catch (error) {
-    archiveRecords = previous;
+    let draftExists = false;
+    try { draftExists = !!(await annsDraftStore.get('archive:'+year)); } catch (_) {}
+    if (!draftExists) archiveRecords = previous;
     renderArchive(year);
     console.error('保存旅行记录失败：', error);
-    alert('保存失败，已恢复原来的记录：' + error.message);
+    alert(draftExists ? '云端同步未完成，本地草稿仍保留。请勿重复上传相同图片。' : '保存失败，已恢复原来的记录：' + error.message);
   } finally {
     previewUrls.forEach(url => URL.revokeObjectURL(url));
     archiveSaveBtn.disabled = false;
