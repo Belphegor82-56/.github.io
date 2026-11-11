@@ -1500,7 +1500,7 @@ document.getElementById('inventory-cancel').addEventListener('click', () => { in
 inventoryImage.addEventListener('change', async () => {
   const file = inventoryImage.files[0];
   if (!file) return;
-  if (!/^image\\/(jpeg|png|webp|gif)$/i.test(file.type)) { alert('目前支持 JPEG、PNG、WebP 图片；GIF 请先转换为静态图片'); inventoryImage.value=''; return; }
+  if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) { alert('目前支持 JPEG、PNG、WebP 图片；GIF 请先转换为静态图片'); inventoryImage.value=''; return; }
   if (file.size > 15 * 1024 * 1024) { alert('图片过大，请选择小于 15MB 的图片'); inventoryImage.value=''; return; }
   if (inventoryPreviewObjectUrl) URL.revokeObjectURL(inventoryPreviewObjectUrl);
   inventoryPreviewObjectUrl = URL.createObjectURL(file);
