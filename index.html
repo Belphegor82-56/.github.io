@@ -57,6 +57,17 @@
 #archive-current-images-list img {width:88px;height:72px;object-fit:cover;border-radius:6px;}
 #archive-current-images-list .archive-photo-item {position:relative;width:88px;height:72px;border-radius:6px;overflow:hidden;}
 #archive-current-images-list .archive-photo-item img {display:block;width:100%;height:100%;object-fit:cover;}
+#archive-current-images-list .archive-photo-item {cursor:grab;}
+#archive-current-images-list .archive-photo-item:active {cursor:grabbing;}
+#archive-current-images-list .archive-photo-dragging {opacity:.4;}
+#archive-current-images-list .archive-photo-drop-target {outline:2px solid #527eaa;outline-offset:2px;}
+#archive-current-images-list .archive-photo-order-controls {position:absolute;bottom:2px;left:2px;display:flex;gap:3px;opacity:0;visibility:hidden;transition:opacity .15s ease;}
+#archive-current-images-list .archive-photo-order-controls button {width:25px;height:23px;border:0;border-radius:5px;background:#111;color:#fff;cursor:pointer;font-size:15px;padding:0;}
+#archive-current-images-list .archive-photo-order-controls button:disabled {opacity:.35;cursor:default;}
+#archive-current-images-list .archive-photo-item:hover .archive-photo-order-controls,
+#archive-current-images-list .archive-photo-item:focus-within .archive-photo-order-controls {opacity:1;visibility:visible;}
+@media (hover:none) {#archive-current-images-list .archive-photo-order-controls {opacity:1;visibility:visible;}}
+
 #archive-current-images-list .archive-photo-remove {position:absolute;right:1px;top:1px;display:grid;place-items:center;border:0;border-radius:50%;background:#111;color:#fff;width:25px;height:25px;padding:0;cursor:pointer;font-size:19px;font-weight:400;line-height:1;opacity:0;visibility:hidden;transform:scale(.85);transition:opacity .15s ease,transform .15s ease,visibility .15s ease;}
 #archive-current-images-list .archive-photo-item:hover .archive-photo-remove,
 #archive-current-images-list .archive-photo-item:focus-within .archive-photo-remove {opacity:1;visibility:visible;transform:scale(1);}
@@ -736,16 +747,56 @@
     archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
   }
+  function moveArchivePhoto(from,to) {
+    if (from === to || from < 0 || to < 0 || from >= archiveRetainedImages.length || to >= archiveRetainedImages.length) return;
+    const [photo] = archiveRetainedImages.splice(from,1);
+    archiveRetainedImages.splice(to,0,photo);
+    renderArchiveEditorImages();
+  }
   function renderArchiveEditorImages() {
     archiveCurrentImagesList.replaceChildren();
     archiveCurrentImages.hidden = archiveRetainedImages.length === 0;
     archiveRetainedImages.forEach((src,index) => {
       const item = document.createElement('div');
       item.className = 'archive-photo-item';
+      item.draggable = true;
+      item.title = '拖动图片调整顺序';
+      item.addEventListener('dragstart',event => {
+        event.dataTransfer.setData('text/plain',String(index));
+        event.dataTransfer.effectAllowed = 'move';
+        item.classList.add('archive-photo-dragging');
+      });
+      item.addEventListener('dragend',() => item.classList.remove('archive-photo-dragging'));
+      item.addEventListener('dragover',event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        item.classList.add('archive-photo-drop-target');
+      });
+      item.addEventListener('dragleave',() => item.classList.remove('archive-photo-drop-target'));
+      item.addEventListener('drop',event => {
+        event.preventDefault();
+        item.classList.remove('archive-photo-drop-target');
+        const raw = event.dataTransfer.getData('text/plain');
+        if (!/^\d+$/.test(raw)) return;
+        moveArchivePhoto(Number(raw),index);
+      });
       const image = document.createElement('img');
       image.src = src;
       image.alt = '旅行照片 ' + (index + 1);
       image.loading = 'lazy';
+      image.draggable = false;
+      const controls = document.createElement('div');
+      controls.className = 'archive-photo-order-controls';
+      for (const [label,delta] of [['←',-1],['→',1]]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.title = delta < 0 ? '向前移动一张' : '向后移动一张';
+        button.setAttribute('aria-label',button.title);
+        button.disabled = index + delta < 0 || index + delta >= archiveRetainedImages.length;
+        button.addEventListener('click',() => moveArchivePhoto(index,index+delta));
+        controls.appendChild(button);
+      }
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'archive-photo-remove';
@@ -756,7 +807,7 @@
         archiveRetainedImages.splice(index,1);
         renderArchiveEditorImages();
       });
-      item.append(image,remove);
+      item.append(image,controls,remove);
       archiveCurrentImagesList.appendChild(item);
     });
   }
