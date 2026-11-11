@@ -750,6 +750,7 @@
     };
   }
   function closeArchiveEditor() {
+    archiveList.querySelectorAll('.archive-card[data-archive-record-id]').forEach(card => { card.hidden = false; });
     archiveEditor.hidden = true;
     editingArchiveId = null;
     archiveRetainedImages = [];
@@ -775,6 +776,9 @@
     const grid = document.getElementById('archive-grid-' + editingArchiveCategory);
     if (grid) grid.prepend(archiveEditor);
     archiveEditor.hidden = false;
+    archiveList.querySelectorAll('.archive-card[data-archive-record-id]').forEach(card => {
+      card.hidden = !!record && card.dataset.archiveRecordId === record.id;
+    });
     archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
   }
@@ -900,6 +904,8 @@
       const recordCategory = normalizeArchive(record).category;
       const card = document.createElement('div');
       card.className = 'archive-card';
+      card.dataset.archiveRecordId = record.id;
+      card.hidden = !archiveEditor.hidden && editingArchiveId === record.id;
       const heading = document.createElement('h3');
       heading.textContent = record.title || '未命名旅行';
       const header = document.createElement('div');
