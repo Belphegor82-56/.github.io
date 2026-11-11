@@ -868,18 +868,24 @@
           deleteBtn.disabled = true;
           const previous = archiveRecords;
           const next = previous.filter(item => item.id !== record.id);
-          // 立即更新页面，后台提交失败时恢复原记录。
+          // 删除记录先持久化，刷新后继续隐藏；云端更新后再清理本地标记。
+          try {
+            await annsDraftStore.put('archive-delete:'+year+':'+record.id, {id:record.id, createdAt:Date.now()});
+          } catch(error) {
+            alert('本地删除状态无法保存，已取消删除以避免刷新后恢复：'+error.message);
+            deleteBtn.disabled = false;
+            return;
+          }
           archiveRecords = next;
           renderArchive(year);
           try {
             await publishArchiveToCloud(year, next);
             if (editingArchiveId === record.id) closeArchiveEditor();
-            showArchiveSaveMessage('已从 GitHub 删除这篇旅行记录。');
+            showArchiveSaveMessage('删除已提交 GitHub，等待网站更新。');
           } catch (error) {
-            archiveRecords = previous;
-            renderArchive(year);
-            console.error('删除旅行记录失败：', error);
-            alert('删除失败，记录已恢复：' + error.message);
+            // 保存失败仍保留删除标记，不让刷新重新显示；用户可稍后重试。
+            console.error('删除旅行记录同步失败：', error);
+            showArchiveSaveMessage('删除已在本地生效，但云端同步失败，请稍后重试。');
           }
         });
         actions.append(editBtn, deleteBtn);
@@ -913,6 +919,16 @@
         showArchiveSaveMessage('已恢复本地草稿，尚未确认同步到 GitHub。');
       }
     } catch(error) { console.error('恢复旅行草稿失败',error); }
+    // 将本地待删除标记覆盖静态页面尚未更新的数据。
+    try {
+      const filtered = [];
+      for (const item of archiveRecords) {
+        const marker = await annsDraftStore.get('archive-delete:'+year+':'+item.id);
+        if (!marker) filtered.push(item);
+      }
+      if (sequence !== archiveLoadSequence) return;
+      archiveRecords = filtered;
+    } catch(error) { console.error('恢复旅行删除标记失败',error); }
     renderArchive(year);
   }
   function readFileAsDataURL(file) {
@@ -1633,17 +1649,25 @@ function renderInventory(category) {
     remove.addEventListener('click',async () => {
       if (!inventoryAdmin() || !confirm('确定删除「'+(record.work || '此记录')+'」吗？')) return;
       const next = readInventory(category).filter(item => item.id !== record.id);
-      // 乐观更新：立即隐藏这一行；保存失败则恢复。
-      tr.hidden = true;
-      remove.disabled = true;
+      // 删除状态先持久化，刷新后不会从尚未更新的 Pages 数据中复活。
+      try {
+        await annsDraftStore.put('inventory:'+category, {entries:next, savedAt:Date.now(), deletion:true});
+      } catch(error) {
+        alert('无法保存本地删除状态，删除已取消：'+error.message);
+        return;
+      }
+      inventoryPreviewRecords[category] = next;
+      inventoryForm.hidden = true;
+      renderInventory(category);
       const saved = await saveInventory(category,next);
       if (saved) {
-        inventoryForm.hidden = true;
-        renderInventory(category);
+        // 保留本地快照直到 Pages 确实发布了删除后的列表。
+        await annsDraftStore.put('inventory:'+category, {entries:next, savedAt:Date.now(), deletion:true, synced:true}).catch(console.error);
+        cloudInventory[category] = next;
       } else {
-        tr.hidden = false;
-        remove.disabled = false;
+        showCloudSaveStatus('本地已删除，云端同步尚未完成');
       }
+      renderInventory(category);
     });
     const actionStack = document.createElement('div'); actionStack.className = 'inventory-action-stack';
     actionStack.append(edit,remove); actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
