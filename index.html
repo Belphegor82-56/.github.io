@@ -2094,6 +2094,141 @@ function renderInventory(category) {
   </script>
   
 <script>
+/* Independent navigation and clock fallback.
+   Keeps the basic site navigation and homepage clock alive if another script fails. */
+(() => {
+  const links = [...document.querySelectorAll('.sidebar [data-category]')];
+  const title = document.getElementById('page-title');
+  const description = document.getElementById('page-description');
+  const welcome = document.getElementById('welcome-card');
+  const archiveContent = document.getElementById('archive-content');
+  const inventoryContent = document.getElementById('inventory-content');
+  const dreamContent = document.getElementById('dream-content');
+  const groupContent = document.getElementById('group-order-content');
+  const archiveList = document.getElementById('archive-list');
+  const archiveYears = ['2026','2025','2024','2023','2022'];
+  const inventoryFiles = {'卡带':'data/inventory-cards.json','通贩':'data/inventory-mailorder.json','中古':'data/inventory-secondhand.json'};
+  let requestId = 0;
+
+  function setVisible(node, visible) {
+    if (node) node.hidden = !visible;
+  }
+  function renderSimpleEntries(list, entries, kind) {
+    if (!list) return;
+    list.replaceChildren();
+    if (!entries.length) {
+      list.textContent = '暂无记录。';
+      return;
+    }
+    entries.forEach(entry => {
+      const card = document.createElement('article');
+      card.className = kind === 'archive' ? 'archive-card' : 'dream-card';
+      const heading = document.createElement('h3');
+      heading.textContent = entry.title || entry.name || entry.work || '未命名记录';
+      card.appendChild(heading);
+      const body = document.createElement('p');
+      body.textContent = entry.description || entry.body || entry.notes || '';
+      if (body.textContent) card.appendChild(body);
+      const imagePaths = [...(Array.isArray(entry.images) ? entry.images : []), ...(entry.image ? [entry.image] : [])];
+      imagePaths.forEach(src => {
+        if (typeof src !== 'string' || !src) return;
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = heading.textContent;
+        img.loading = 'lazy';
+        card.appendChild(img);
+      });
+      list.appendChild(card);
+    });
+  }
+  async function loadFallbackCategory(category, token) {
+    try {
+      if (archiveYears.includes(category)) {
+        const response = await fetch('data/public-archive-' + category + '.json?fallback=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) throw new Error('load failed');
+        const data = await response.json();
+        if (token !== requestId) return;
+        renderSimpleEntries(archiveList, Array.isArray(data.entries) ? data.entries : [], 'archive');
+      } else if (category === '梦情') {
+        const response = await fetch('data/dream-records.json?fallback=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) throw new Error('load failed');
+        const data = await response.json();
+        if (token !== requestId) return;
+        renderSimpleEntries(document.getElementById('dream-list'), Array.isArray(data.entries) ? data.entries : [], 'dream');
+      } else if (inventoryFiles[category]) {
+        const response = await fetch(inventoryFiles[category] + '?fallback=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) throw new Error('load failed');
+        const data = await response.json();
+        if (token !== requestId) return;
+        const body = document.querySelector('#inventory-content tbody');
+        if (body) {
+          body.replaceChildren();
+          (Array.isArray(data.entries) ? data.entries : []).forEach(entry => {
+            const tr = document.createElement('tr');
+            [entry.work, entry.version, entry.quantity, entry.price, entry.groupName, entry.platform, entry.kind, entry.notes]
+              .forEach(value => { const td=document.createElement('td'); td.textContent=value == null || value === '' ? '—' : String(value); tr.appendChild(td); });
+            body.appendChild(tr);
+          });
+        }
+      } else if (category === '群排') {
+        const response = await fetch('data/group-orders.json?fallback=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) throw new Error('load failed');
+        const data = await response.json();
+        if (token !== requestId) return;
+        const body = document.querySelector('#group-order-content tbody');
+        if (body) {
+          body.replaceChildren();
+          (Array.isArray(data.entries) ? data.entries : []).forEach(entry => {
+            const tr=document.createElement('tr');
+            [entry.work,entry.version,entry.quantity,entry.price,entry.groupName,entry.platform,entry.kind,entry.notes]
+              .forEach(value=>{const td=document.createElement('td');td.textContent=value == null || value === '' ? '—' : String(value);tr.appendChild(td);});
+            body.appendChild(tr);
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Fallback page data could not be loaded:', category, error);
+    }
+  }
+  function updateFallbackPage() {
+    const category = decodeURIComponent(location.hash.replace(/^#/, ''));
+    const match = links.find(link => link.dataset.category === category);
+    const token = ++requestId;
+    links.forEach(link => link.classList.toggle('active', link === match));
+    if (match) match.closest('details')?.setAttribute('open','');
+    setVisible(welcome, !match);
+    setVisible(archiveContent, archiveYears.includes(category));
+    setVisible(inventoryContent, !!inventoryFiles[category]);
+    setVisible(dreamContent, category === '梦情');
+    setVisible(groupContent, category === '群排');
+    document.body.classList.toggle('home-view', !match);
+    document.body.classList.toggle('collection-view', !!match);
+    if (title) title.textContent = match ? category : 'Ann’s Website';
+    if (description) description.textContent = archiveYears.includes(category) ? 'The Wandering Archive · ' + category : '';
+    if (match) loadFallbackCategory(category, token);
+  }
+  links.forEach(link => link.addEventListener('click', () => {
+    const target = '#' + encodeURIComponent(link.dataset.category);
+    if (location.hash === target) updateFallbackPage();
+  }));
+  window.addEventListener('hashchange', updateFallbackPage);
+  updateFallbackPage();
+
+  function updateFallbackClock() {
+    const now = new Date();
+    const time = document.getElementById('home-clock-time');
+    const date = document.getElementById('home-clock-date');
+    if (!time || !date) return;
+    time.textContent = new Intl.DateTimeFormat('en-US', {hour:'numeric',minute:'2-digit',hour12:true}).format(now);
+    date.textContent = new Intl.DateTimeFormat('en-US', {weekday:'short',month:'short',day:'numeric',year:'numeric'}).format(now);
+    time.dateTime = now.toISOString();
+  }
+  updateFallbackClock();
+  window.setInterval(updateFallbackClock, 1000);
+})();
+</script>
+
+<script>
 (() => {
   const API = "https://curly-wind-151eanns-website-api.ann657299.workers.dev";
   const KEY = "anns-admin-session";
