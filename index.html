@@ -32,7 +32,11 @@
            width: 80%; max-width: 600px; min-height: 150px; height: auto;}
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
-  .archive-card {box-sizing: border-box;margin: 18px 0;background: #ffffff;border-radius: 22px;padding: 18px;box-shadow: 0 3px 12px #00000010;width: 100%;max-width: 520px;}
+  #archive-list {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;align-items:start;}
+  .archive-card {box-sizing:border-box;margin:0;background:#ffffff;border-radius:22px;padding:18px;box-shadow:0 3px 12px #00000010;width:100%;min-width:0;max-width:none;overflow-wrap:anywhere;}
+  @media (max-width:1500px) {#archive-list {grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media (max-width:1100px) {#archive-list {grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media (max-width:700px) {#archive-list {grid-template-columns:minmax(0,1fr);}}
   .archive-card-header {display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
   .archive-card-header h3 {margin-top:0;min-width:0;flex:1;}
   #archive-content #add-archive-btn {display:block;margin:12px auto 18px 0;}
@@ -75,11 +79,18 @@
 #archive-current-images-list .archive-photo-remove:focus-visible {outline:2px solid #fff;outline-offset:-3px;}
 @media (hover:none) {#archive-current-images-list .archive-photo-remove {opacity:1;visibility:visible;transform:none;}}
     #archive-editor {
-  margin-top: 25px;
-  padding: 25px;
+  margin: 0;
+  padding: 18px;
   background: #ffffff;
-  border-radius: 15px;
-  max-width: 600px;}
+  border-radius: 22px;
+  box-shadow: 0 3px 12px #00000010;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  overflow-wrap: anywhere;}
+#archive-editor .editor-toolbar {flex-wrap:wrap;}
+#archive-editor .rich-editor {min-width:0;}
+#archive-editor img {max-width:100%;height:auto;}
 
 #archive-editor input[type="text"],
 #archive-editor textarea {
@@ -743,6 +754,7 @@
     archiveRetainedImages = record && Array.isArray(record.images) ? [...record.images] : [];
     renderArchiveEditorImages();
     savedRange = null;
+    archiveList.prepend(archiveEditor);
     archiveEditor.hidden = false;
     archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
@@ -818,11 +830,12 @@
   }
   function renderArchive(year) {
     archiveList.replaceChildren();
+    if (!archiveEditor.hidden) archiveList.appendChild(archiveEditor);
     const isAdmin = window.annsCloud?.isAdmin() === true;
     addArchiveBtn.hidden = !isAdmin;
     if (!isAdmin && !archiveEditor.hidden) closeArchiveEditor();
     if (!archiveRecords.length) {
-      archiveList.textContent = year + ' 年还没有旅行记录。';
+      if (archiveEditor.hidden) archiveList.textContent = year + ' 年还没有旅行记录。';
       return;
     }
     archiveRecords.forEach(record => {
@@ -1254,7 +1267,7 @@ archiveSaveBtn.addEventListener('click', async () => {
       images: [...archiveRetainedImages, ...previewPaths]
     };
     delete record.body;
-    const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
+    const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [record, ...archiveRecords];
     // 将临时 blob 地址转换为可持久保存的图片数据。
     const durableImages = await Promise.all(files.map(file => readFileAsDataURL(file)));
     const durableWrapper = document.createElement('div');
