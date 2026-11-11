@@ -1438,12 +1438,9 @@ async function saveInventory(category, records) {
         if (verified) break;
       } catch(error) { console.warn('Inventory save verification retry:',error); }
     }
-    if (verified) {
-      showCloudSaveStatus('收藏记录已保存并核对完成', 'success');
-    } else {
-      showCloudSaveStatus('已提交，网站更新核对仍在等待', 'error');
-      alert('保存请求已成功提交，但网站数据暂时还未能完成核对。请稍等片刻后刷新页面确认；在确认前不要重复上传同一批图片。');
-    }
+    // GitHub 已接受保存请求即视为提交成功；不弹出 Pages 发布延迟提示。
+    // 真正的上传或提交失败仍由 catch 显示错误。
+    showCloudSaveStatus('保存已提交', 'success');
     return true;
   } catch(error) {
     showCloudSaveStatus('保存未完成', 'error');
