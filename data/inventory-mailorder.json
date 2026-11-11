@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "af04f33e-d545-4c9a-b30f-1d5e61786129",
+      "image": "images/uploads/1794364584845-6776a6d9ff2b1ce9.jpg",
+      "received": false,
+      "work": "PICCODO BODY10",
+      "version": "デフォルメドールボディ VER.2.0",
+      "quantity": 1,
+      "price": 2750,
+      "currency": "JPY",
+      "kind": "素体",
+      "platform": "piccodo",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-11",
+      "shipDate": ""
+    },
+    {
       "id": "bb50e0a4-f461-4f2c-8593-99c3f7ffa59b",
       "image": "images/uploads/1794363585337-2fb27ff3868a271a.jpg",
       "received": false,
