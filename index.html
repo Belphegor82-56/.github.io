@@ -38,8 +38,9 @@
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
   #archive-list {display:block;}
-  .archive-category {margin:14px 0 26px;border:1px solid #e8e2da;border-radius:16px;padding:0 16px 16px;background:#fff;}
-  .archive-category > summary {font-size:19px;font-weight:600;padding:15px 4px;}
+  .archive-category {margin:14px 0 26px;border:0;border-radius:0;padding:0;background:transparent;}
+  .archive-category > summary {font-size:19px;font-weight:600;padding:15px 12px;margin:0 0 12px;border-radius:12px;background:#ece7e0;}
+  .archive-category[open] > summary {background:#ece7e0;}
   .archive-category-toolbar {display:flex;justify-content:flex-start;margin:4px 0 16px;}
   .archive-category-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;}
   .archive-category-empty {color:#999;font-size:13px;padding:12px 0;}
