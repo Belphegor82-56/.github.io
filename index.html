@@ -1372,28 +1372,83 @@ function inventoryAdmin() { return inventoryAuthorized() && !inventorySaving; }
 function inventoryImageUrl(value) { return typeof value === 'string' && value.startsWith('images/uploads/') ? value : (value || ''); }
 async function saveInventory(category, records) {
   if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
+  if (!Array.isArray(records) || records.some(record => !record || typeof record.id !== 'string' || !record.id.trim())) {
+    alert('商品数据检查未通过：存在无效记录，尚未保存。'); return false;
+  }
+  const ids = records.map(record => record.id);
+  if (new Set(ids).size !== ids.length) {
+    alert('商品数据检查未通过：发现重复记录，尚未保存。'); return false;
+  }
   inventorySaving = true;
-  showCloudSaveStatus('正在保存云端…');
+  showCloudSaveStatus('正在检查并保存云端…');
   refreshInventoryAccess();
   try {
-    const prepared = records.map(record => ({...record}));
+    // 保存前先检查云端版本，避免用旧页面覆盖其他页面刚保存的数据。
+    const path = inventoryCloudPaths[category];
+    const checkResponse = await fetch(path + '?check=' + Date.now(), {cache:'no-store'});
+    if (!checkResponse.ok) throw new Error('无法读取最新云端数据，已取消保存以保护原有记录');
+    const latestPayload = await checkResponse.json();
+    if (!latestPayload || !Array.isArray(latestPayload.entries)) throw new Error('云端数据格式异常，已取消保存');
+    if (JSON.stringify(latestPayload.entries) !== JSON.stringify(cloudInventory[category])) {
+      throw new Error('云端数据已被其他页面更新。为避免覆盖新内容，请刷新网页后重新操作');
+    }
+
+    const previousById = new Map(cloudInventory[category].map(record => [record.id,record]));
+    const prepared = records.map(record => {
+      const copy = {...record};
+      const previous = previousById.get(copy.id);
+      // 当前界面没有“删除图片”操作；空值不能覆盖已有图片。
+      if ((!copy.image || copy.image === '') && previous && previous.image) copy.image = previous.image;
+      return copy;
+    });
     for (const record of prepared) {
       if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
         const blob = await fetch(record.image).then(response => response.blob());
         const result = await window.annsCloud.request('/upload',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
-        if (!result.ok || !result.path) throw new Error('图片上传失败');
+        if (!result.ok || !result.path) throw new Error('有图片未能成功上传；商品数据尚未提交');
         record.image = result.path;
       }
+      if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
+        throw new Error('图片仍处于待上传状态，已取消保存');
+      }
     }
+    if (prepared.length !== records.length || new Set(prepared.map(record => record.id)).size !== prepared.length) {
+      throw new Error('保存前复核失败：记录数量或唯一编号不一致');
+    }
+
     const result = await window.annsCloud.request('/publish-collection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,entries:prepared})});
     if (!result.ok) throw new Error('GitHub 保存失败');
     cloudInventory[category] = prepared;
-    showCloudSaveStatus('收藏记录已保存', 'success');
+    showCloudSaveStatus('已提交，正在核对保存结果…');
+
+    // 静态网站更新可能有短暂延迟；重试读取，确认条目及图片路径已发布。
+    let verified = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      if (attempt) await new Promise(resolve => setTimeout(resolve,1500));
+      try {
+        const verifyResponse = await fetch(path + '?verify=' + Date.now(), {cache:'no-store'});
+        if (!verifyResponse.ok) continue;
+        const verifyPayload = await verifyResponse.json();
+        if (!verifyPayload || !Array.isArray(verifyPayload.entries)) continue;
+        const verifiedById = new Map(verifyPayload.entries.map(record => [record.id,record]));
+        verified = verifyPayload.entries.length === prepared.length && prepared.every(record => {
+          const saved = verifiedById.get(record.id);
+          return saved && (saved.image || '') === (record.image || '');
+        });
+        if (verified) break;
+      } catch(error) { console.warn('Inventory save verification retry:',error); }
+    }
+    if (verified) {
+      showCloudSaveStatus('收藏记录已保存并核对完成', 'success');
+    } else {
+      showCloudSaveStatus('已提交，网站更新核对仍在等待', 'error');
+      alert('保存请求已成功提交，但网站数据暂时还未能完成核对。请稍等片刻后刷新页面确认；在确认前不要重复上传同一批图片。');
+    }
     return true;
   } catch(error) {
-    showCloudSaveStatus('保存失败，请检查网络后重试', 'error');
+    showCloudSaveStatus('保存未完成', 'error');
     console.error('Cloud save failed:',error);
-    alert('云端保存失败：' + error.message + '。原有云端记录未在网页中替换，请重试。');
+    alert('保存已中止：' + error.message + '。原有云端商品数据未被本次操作覆盖，请刷新后再试。');
     return false;
   } finally { inventorySaving = false; refreshInventoryAccess(); }
 }
