@@ -18,7 +18,8 @@
         "images/uploads/1794296678494-aa452b65861360d0.jpg"
       ],
       "createdAt": "2026-11-10T00:00:00+09:00",
-      "updatedAt": "2026-11-11T05:33:26.754Z"
+      "updatedAt": "2026-11-11T05:33:26.754Z",
+      "category": "travel"
     },
     {
       "id": "trip-1794375422970-0zy08gc7",
@@ -30,7 +31,8 @@
       "images": [
         "images/uploads/1794375737400-418b087bfaa2f739.webp",
         "images/uploads/1794375741370-75c96e0660d5ee15.webp"
-      ]
+      ],
+      "category": "diary"
     }
   ]
 }
