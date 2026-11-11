@@ -949,6 +949,26 @@
       if (bitmap) bitmap.close();
     }
   }
+  // 有限并发上传：保留文件顺序，同时避免一次发出过多请求。
+  async function mapArchiveConcurrent(items, worker, concurrency = 3, onProgress = null) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    let completed = 0;
+    async function runWorker() {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) return;
+        results[index] = await worker(items[index], index);
+        completed++;
+        if (onProgress) onProgress(completed, items.length);
+      }
+    }
+    await Promise.all(Array.from(
+      { length: Math.min(Math.max(1, concurrency), items.length) },
+      () => runWorker()
+    ));
+    return results;
+  }
   async function uploadArchiveBlob(blob) {
     if (!blob || !/^image\/(jpeg|png|webp|gif)$/i.test(blob.type)) {
       throw new Error('图片格式仅支持 JPEG、PNG、WebP 或 GIF。');
@@ -959,7 +979,7 @@
       headers: { 'Content-Type': uploadBlob.type || blob.type },
       body: uploadBlob
     });
-    if (!result.path) throw new Error('图片上传后没有收到 GitHub 路径。');
+    if (!result || !result.ok || !result.path) throw new Error('图片上传后没有收到有效的 GitHub 路径。');
     return result.path;
   }
   function normalizeArchiveImagePath(value) {
@@ -977,7 +997,8 @@
   async function prepareArchiveHtml(html) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = html || '';
-    for (const img of wrapper.querySelectorAll('img')) {
+    const images = [...wrapper.querySelectorAll('img')];
+    await mapArchiveConcurrent(images, async img => {
       const src = img.getAttribute('src') || '';
       if (/^(blob:|data:image\/)/i.test(src)) {
         const blob = await fetch(src).then(response => {
@@ -993,7 +1014,7 @@
           }
         } catch (_) {}
       }
-    }
+    }, 3);
     return wrapper.innerHTML;
   }
   async function prepareArchiveEntries(records) {
@@ -1003,19 +1024,17 @@
       record.id = String(record.id || archiveId());
       record.title = String(record.title || '');
       record.html = await prepareArchiveHtml(record.html || '');
-      const images = [];
-      for (const src of (Array.isArray(record.images) ? record.images : [])) {
+      const sourceImages = Array.isArray(record.images) ? record.images : [];
+      record.images = await mapArchiveConcurrent(sourceImages, async src => {
         if (typeof src === 'string' && /^(blob:|data:image\/)/i.test(src)) {
           const blob = await fetch(src).then(response => {
             if (!response.ok) throw new Error('无法读取附图。');
             return response.blob();
           });
-          images.push(await uploadArchiveBlob(blob));
-        } else {
-          images.push(normalizeArchiveImagePath(src));
+          return uploadArchiveBlob(blob);
         }
-      }
-      record.images = images;
+        return normalizeArchiveImagePath(src);
+      }, 3);
       prepared.push(record);
     }
     return prepared;
@@ -1122,10 +1141,12 @@ archiveSaveBtn.addEventListener('click', async () => {
   archiveSaveBtn.textContent = '正在上传并保存…';
   try {
     const old = archiveRecords.find(item => item.id === editingArchiveId);
-    const newImagePaths = [];
-    for (const file of [...archiveImagesInput.files]) {
-      newImagePaths.push(await uploadArchiveBlob(file));
-    }
+    const selectedFiles = [...archiveImagesInput.files];
+    showArchiveSaveMessage(selectedFiles.length
+      ? '正在准备上传 ' + selectedFiles.length + ' 张图片…'
+      : '正在保存旅行记录…');
+    const newImagePaths = await mapArchiveConcurrent(selectedFiles, file => uploadArchiveBlob(file), 3,
+      (done, total) => showArchiveSaveMessage('图片上传中：' + done + '/' + total + '（最多同时上传 3 张）…'));
     const record = {
       ...(old || {}),
       id: old ? old.id : archiveId(),
