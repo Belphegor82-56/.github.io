@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "bb50e0a4-f461-4f2c-8593-99c3f7ffa59b",
+      "image": "images/uploads/1794363585337-2fb27ff3868a271a.jpg",
+      "received": false,
+      "work": "PICCODO BODY11",
+      "version": "デフォルメドールボディ - クリームホワイト-",
+      "quantity": 1,
+      "price": 2970,
+      "currency": "JPY",
+      "kind": "素体",
+      "platform": "piccodo",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-11",
+      "shipDate": ""
+    },
+    {
       "id": "62a75394-7741-49a4-9b81-281aea0b3df5",
       "image": "images/uploads/1794285346976-bff9adf8dea789ef.jpg",
       "received": false,
