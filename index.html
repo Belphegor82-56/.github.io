@@ -13,7 +13,12 @@
     .content { flex: 1; min-width: 0; min-height: 100vh; padding: 40px; background: #ffffff; }
     .welcome-text {text-align: center; color: #333;padding: 50px;}
 
-    .site-avatar {width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 20px;}
+    .site-avatar {width:100px;height:100px;border-radius:50%;object-fit:cover;display:block;margin:0 auto;}
+    .site-avatar-wrap {position:relative;width:100px;height:100px;margin:0 auto 20px;border-radius:50%;overflow:hidden;}
+    .site-avatar-change {position:absolute;inset:0;border:0;background:rgba(0,0,0,.48);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;opacity:0;visibility:hidden;transition:opacity .15s ease;}
+    .site-avatar-wrap:hover .site-avatar-change,.site-avatar-wrap:focus-within .site-avatar-change {opacity:1;visibility:visible;}
+    .site-avatar-change:disabled {cursor:wait;}
+    @media (hover:none) {.site-avatar-wrap .site-avatar-change:not([hidden]) {opacity:1;visibility:visible;}}
     h1 a {color: inherit;text-decoration: none;}
     h1 a:hover {opacity: 0.7;}
     details { margin-bottom: 10px; }
@@ -465,7 +470,11 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <img src="images/avatar.jpg" class="site-avatar" alt="网站头像">
+      <div class="site-avatar-wrap">
+        <img src="images/avatar.jpg" class="site-avatar" id="site-avatar" alt="网站头像">
+        <button type="button" class="site-avatar-change" id="site-avatar-change" hidden aria-label="更换头像">📷 更换</button>
+        <input type="file" id="site-avatar-input" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
       <h1>
   <a href="index.html">Ann’s Website</a>
 </h1>
@@ -2358,6 +2367,57 @@ function renderInventory(category) {
     toolbar.appendChild(button);
     document.body.appendChild(toolbar);
 
+    const avatarImage = document.getElementById("site-avatar");
+    const avatarChange = document.getElementById("site-avatar-change");
+    const avatarInput = document.getElementById("site-avatar-input");
+    avatarImage.src = "images/avatar.jpg?v=" + Date.now();
+    avatarChange.hidden = !authenticated;
+    if (authenticated) {
+      avatarChange.addEventListener("click", () => avatarInput.click());
+      avatarInput.addEventListener("change", async () => {
+        const file = avatarInput.files?.[0];
+        if (!file) return;
+        if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
+          alert("请选择 JPG、PNG 或 WebP 图片。");
+          avatarInput.value = "";
+          return;
+        }
+        const previous = avatarImage.src;
+        const preview = URL.createObjectURL(file);
+        avatarImage.src = preview;
+        avatarChange.disabled = true;
+        avatarChange.textContent = "上传中…";
+        try {
+          const bitmap = await createImageBitmap(file);
+          const side = Math.min(600,bitmap.width,bitmap.height);
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = side;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("无法处理图片");
+          const crop = Math.min(bitmap.width,bitmap.height);
+          ctx.drawImage(bitmap,(bitmap.width-crop)/2,(bitmap.height-crop)/2,crop,crop,0,0,side,side);
+          bitmap.close?.();
+          const blob = await new Promise(resolve => canvas.toBlob(resolve,"image/jpeg",0.88));
+          if (!blob) throw new Error("图片转换失败");
+          const result = await request("/avatar",{
+            method:"POST",
+            headers:{"Content-Type":"image/jpeg"},
+            body:blob
+          });
+          if (!result.ok) throw new Error("服务器没有确认头像保存成功");
+          avatarImage.src = "images/avatar.jpg?v=" + Date.now();
+          alert("头像已上传至 GitHub，网站发布后所有访客都能看到。");
+        } catch (error) {
+          avatarImage.src = previous;
+          alert("头像保存失败：" + error.message + "。请确认 Cloudflare Worker 已更新。");
+        } finally {
+          URL.revokeObjectURL(preview);
+          avatarInput.value = "";
+          avatarChange.disabled = false;
+          avatarChange.textContent = "📷 更换";
+        }
+      });
+    }
     window.annsCloud = {
       request,
       isAdmin: () => authenticated
