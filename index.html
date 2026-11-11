@@ -33,6 +33,10 @@
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
   .archive-card {box-sizing: border-box;margin: 18px 0;background: #ffffff;border-radius: 12px;padding: 18px;box-shadow: 0 3px 12px #00000010;width: 100%;max-width: 520px;}
+  .archive-card-header {display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+  .archive-card-header h3 {margin-top:0;min-width:0;flex:1;}
+  #archive-content #add-archive-btn {display:block;margin:12px 0 18px auto;}
+  #archive-content #add-archive-btn[hidden] {display:none;}
   .archive-card img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;border-radius: 10px;margin: 12px auto 0;}
   .archive-gallery {width:100%;max-width:100%;margin:12px auto 0;position:relative;overflow:hidden;}
   .archive-gallery-link {display:flex;align-items:center;justify-content:center;width:100%;min-height:100px;}
@@ -45,7 +49,8 @@
   .archive-card p {line-height: 1.8;}
   .archive-entry-body {line-height: 1.8; overflow-wrap: anywhere;}
   .archive-entry-body img {display: block;width: auto;max-width: 100%;max-height: 260px;height: auto;object-fit: contain;margin: 12px auto;}
-    .archive-entry-dates {margin:5px 0 10px;color:#888;font-size:12px;line-height:1.7;}
+    .archive-entry-dates {margin:0 0 10px;color:#888;font-size:11px;line-height:1.7;text-align:right;flex-shrink:0;}
+    @media (max-width:480px) {.archive-card-header {flex-wrap:wrap;}.archive-entry-dates {margin-left:auto;}}
     .archive-current-images {margin:14px 0;padding:12px;background:#f7f7f5;border-radius:9px;}
 .archive-current-images p {margin:0 0 8px;font-size:13px;color:#666;}
 #archive-current-images-list {display:flex;flex-wrap:wrap;gap:8px;}
@@ -125,10 +130,15 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid #e4dfd8;
+  margin-top: 10px;
+  min-height: 36px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .16s ease, visibility .16s ease;
 }
+.archive-card:hover .archive-actions,
+.archive-card:focus-within .archive-actions {opacity:1;visibility:visible;}
+@media (hover:none) {.archive-actions {opacity:1;visibility:visible;}}
 
 .archive-actions button {
   padding: 8px 15px;
@@ -617,6 +627,8 @@
     const insertImageBtn = document.getElementById('insert-image-btn');
     const inlineImageInput = document.getElementById('inline-image-input');
     const addArchiveBtn = document.getElementById('add-archive-btn');
+    // 管理入口放在记录列表上方（原保存状态提示的位置）。
+    archiveContent.insertBefore(addArchiveBtn, archiveList);
     const archiveEditor = document.getElementById('archive-editor');
     const archiveTitleInput = document.getElementById('archive-title');
     const archiveCurrentImages = document.getElementById('archive-current-images');
@@ -767,7 +779,9 @@
       card.className = 'archive-card';
       const heading = document.createElement('h3');
       heading.textContent = record.title || '未命名旅行';
-      card.appendChild(heading);
+      const header = document.createElement('div');
+      header.className = 'archive-card-header';
+      header.appendChild(heading);
       const dates = document.createElement('div');
       dates.className = 'archive-entry-dates';
       const formatArchiveDate = value => {
@@ -787,7 +801,8 @@
         updatedDate.textContent = '最新编辑：' + formatArchiveDate(record.updatedAt);
         dates.appendChild(updatedDate);
       }
-      card.appendChild(dates);
+      header.appendChild(dates);
+      card.appendChild(header);
       const body = document.createElement('div');
       body.className = 'archive-entry-body';
       if (record.body) {
@@ -1074,15 +1089,10 @@
     return prepared;
   }
   function showArchiveSaveMessage(message) {
-    let status = document.getElementById('archive-save-status');
-    if (!status) {
-      status = document.createElement('p');
-      status.id = 'archive-save-status';
-      status.setAttribute('role', 'status');
-      status.style.cssText = 'margin:12px 0;color:#66806a;font-size:13px;';
-      archiveContent.insertBefore(status, archiveList);
-    }
-    status.textContent = message;
+    // 保存状态仅在开发者控制台记录，不在卡片上方显示。
+    console.info('[旅行记录]', message);
+    const oldStatus = document.getElementById('archive-save-status');
+    if (oldStatus) oldStatus.remove();
   }
   async function publishArchiveToCloud(year, records) {
     if (window.annsCloud?.isAdmin() !== true) throw new Error('管理员登录状态已失效，请重新登录。');
