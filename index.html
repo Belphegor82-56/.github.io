@@ -37,11 +37,16 @@
            width: 80%; max-width: 600px; min-height: 150px; height: auto;}
     .card img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; max-width: 100%; }
     @media (max-width: 600px) { .layout { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e4dfd8; padding: 22px; } h1 { margin-bottom: 16px; } main { padding: 28px 22px; } }
-  #archive-list {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;}
+  #archive-list {display:block;}
+  .archive-category {margin:14px 0 26px;border:1px solid #e8e2da;border-radius:16px;padding:0 16px 16px;background:#fff;}
+  .archive-category > summary {font-size:19px;font-weight:600;padding:15px 4px;}
+  .archive-category-toolbar {display:flex;justify-content:flex-start;margin:4px 0 16px;}
+  .archive-category-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;}
+  .archive-category-empty {color:#999;font-size:13px;padding:12px 0;}
   .archive-card {box-sizing:border-box;margin:0;background:#ffffff;border-radius:22px;padding:18px;box-shadow:0 3px 12px #00000010;width:100%;min-width:0;max-width:none;overflow-wrap:anywhere;}
   
-  @media (max-width:1100px) {#archive-list {grid-template-columns:repeat(2,minmax(0,1fr));}}
-  @media (max-width:700px) {#archive-list {grid-template-columns:minmax(0,1fr);}}
+  @media (max-width:1100px) {.archive-category-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media (max-width:700px) {.archive-category-grid {grid-template-columns:minmax(0,1fr);}}
   .archive-card-header {display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
   .archive-card-header h3 {margin-top:0;min-width:0;flex:1;}
   #archive-content #add-archive-btn {display:block;margin:12px auto 18px 0;}
@@ -658,8 +663,7 @@
     const insertImageBtn = document.getElementById('insert-image-btn');
     const inlineImageInput = document.getElementById('inline-image-input');
     const addArchiveBtn = document.getElementById('add-archive-btn');
-    // 管理入口放在记录列表上方（原保存状态提示的位置）。
-    archiveContent.insertBefore(addArchiveBtn, archiveList);
+    // 分类内分别提供添加入口。
     const archiveEditor = document.getElementById('archive-editor');
     const archiveTitleInput = document.getElementById('archive-title');
     const archiveCurrentImages = document.getElementById('archive-current-images');
@@ -704,6 +708,8 @@
   const archiveStoragePrefix = 'anns-website-archive-records-v1-';
   let archiveRecords = [];
   let editingArchiveId = null;
+  let editingArchiveCategory = "travel";
+  const archiveOpenCategories = {travel:true,diary:false};
   let archiveRetainedImages = [];
   let activeArchiveYear = null;
   let archiveLoadSequence = 0;
@@ -738,7 +744,8 @@
       title: record.title || '',
       description: record.description || '',
       html: record.html || '',
-      images: Array.isArray(record.images) ? record.images : []
+      images: Array.isArray(record.images) ? record.images : [],
+      category: record.category === 'diary' || /银杏大道/.test(record.title || '') ? 'diary' : 'travel'
     };
   }
   function closeArchiveEditor() {
@@ -749,13 +756,14 @@
     archiveImagesInput.value = '';
     inlineImageInput.value = '';
   }
-  function openArchiveEditor(record = null) {
+  function openArchiveEditor(record = null, category = "travel") {
     if (window.annsCloud?.isAdmin() !== true) {
       alert('请先登录管理员。');
       return;
     }
     editingArchiveId = record ? record.id : null;
-    archiveEditorHeading.textContent = record ? '编辑这篇旅行日记' : '新建旅行日记';
+    editingArchiveCategory = record ? normalizeArchive(record).category : category;
+    archiveEditorHeading.textContent = record ? '编辑这篇记录' : (editingArchiveCategory === 'diary' ? '新建日常记录' : '新建旅行记录');
     archiveSaveBtn.textContent = record ? '保存修改' : '发布日记';
     archiveTitleInput.value = record ? (record.title || '') : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.body || record.description || '').replace(/\n/g, '<br>')) : '';
@@ -763,7 +771,8 @@
     archiveRetainedImages = record && Array.isArray(record.images) ? [...record.images] : [];
     renderArchiveEditorImages();
     savedRange = null;
-    archiveList.prepend(archiveEditor);
+    const grid = document.getElementById('archive-grid-' + editingArchiveCategory);
+    if (grid) grid.prepend(archiveEditor);
     archiveEditor.hidden = false;
     archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
@@ -839,12 +848,47 @@
   }
   function renderArchive(year) {
     archiveList.replaceChildren();
-    if (!archiveEditor.hidden) archiveList.appendChild(archiveEditor);
     const isAdmin = window.annsCloud?.isAdmin() === true;
     addArchiveBtn.hidden = !isAdmin;
     if (!isAdmin && !archiveEditor.hidden) closeArchiveEditor();
-    if (!archiveRecords.length) {
-      if (archiveEditor.hidden) archiveList.textContent = year + ' 年还没有旅行记录。';
+    const grids = {};
+    for (const [category,label] of [['travel','Travel · 旅行记录'],['diary','Diary · 日常记录']]) {
+      const section = document.createElement('details');
+      section.className = 'archive-category';
+      section.open = archiveOpenCategories[category];
+      section.addEventListener('toggle',() => {archiveOpenCategories[category] = section.open;});
+      const summary = document.createElement('summary');
+      summary.textContent = label;
+      section.appendChild(summary);
+      const toolbar = document.createElement('div');
+      toolbar.className = 'archive-category-toolbar';
+      const button = category === 'travel' ? addArchiveBtn : document.createElement('button');
+      button.type = 'button';
+      button.textContent = category === 'travel' ? '+ 添加旅行记录' : '+ 添加日常记录';
+      if (category === 'diary') button.addEventListener('click',() => openArchiveEditor(null,'diary'));
+      button.hidden = !isAdmin;
+      toolbar.appendChild(button);
+      section.appendChild(toolbar);
+      const grid = document.createElement('div');
+      grid.className = 'archive-category-grid';
+      grid.id = 'archive-grid-' + category;
+      grids[category] = grid;
+      section.appendChild(grid);
+      archiveList.appendChild(section);
+    }
+    if (!archiveEditor.hidden) {
+      archiveOpenCategories[editingArchiveCategory] = true;
+      const section = grids[editingArchiveCategory]?.closest('details');
+      if (section) section.open = true;
+      grids[editingArchiveCategory]?.appendChild(archiveEditor);
+    }
+    if (!archiveRecords.length && archiveEditor.hidden) {
+      for (const [category,grid] of Object.entries(grids)) {
+        const empty = document.createElement('p');
+        empty.className = 'archive-category-empty';
+        empty.textContent = '还没有记录。';
+        grid.appendChild(empty);
+      }
       return;
     }
     [...archiveRecords].sort((a,b) => {
@@ -852,6 +896,7 @@
       const tb = Date.parse(b.createdAt || '') || 0;
       return tb - ta;
     }).forEach(record => {
+      const recordCategory = normalizeArchive(record).category;
       const card = document.createElement('div');
       card.className = 'archive-card';
       const heading = document.createElement('h3');
@@ -1009,8 +1054,16 @@
         actions.append(editBtn, deleteBtn);
         card.appendChild(actions);
       }
-      archiveList.appendChild(card);
+      grids[recordCategory].appendChild(card);
     });
+    for (const [category,grid] of Object.entries(grids)) {
+      if (!grid.querySelector('.archive-card') && !(grid.contains(archiveEditor) && !archiveEditor.hidden)) {
+        const empty = document.createElement('p');
+        empty.className = 'archive-category-empty';
+        empty.textContent = '还没有记录。';
+        grid.appendChild(empty);
+      }
+    }
   }
   async function loadArchive(year = '2026') {
     activeArchiveYear = year;
@@ -1248,7 +1301,7 @@ inlineImageInput.addEventListener('change', () => {
 });
 
     
-addArchiveBtn.addEventListener('click', () => openArchiveEditor());
+addArchiveBtn.addEventListener('click', () => openArchiveEditor(null,'travel'));
 archiveCancelBtn.addEventListener('click', closeArchiveEditor);
 archiveSaveBtn.addEventListener('click', async () => {
   const year = activeArchiveYear;
@@ -1277,7 +1330,8 @@ archiveSaveBtn.addEventListener('click', async () => {
       title: archiveTitleInput.value.trim(),
       description: richEditor.innerText,
       html: richEditor.innerHTML,
-      images: [...archiveRetainedImages, ...previewPaths]
+      images: [...archiveRetainedImages, ...previewPaths],
+      category: old ? normalizeArchive(old).category : editingArchiveCategory
     };
     delete record.body;
     const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [record, ...archiveRecords];
