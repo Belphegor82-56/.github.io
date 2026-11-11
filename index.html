@@ -838,7 +838,11 @@
       if (archiveEditor.hidden) archiveList.textContent = year + ' 年还没有旅行记录。';
       return;
     }
-    archiveRecords.forEach(record => {
+    [...archiveRecords].sort((a,b) => {
+      const ta = Date.parse(a.createdAt || '') || 0;
+      const tb = Date.parse(b.createdAt || '') || 0;
+      return tb - ta;
+    }).forEach(record => {
       const card = document.createElement('div');
       card.className = 'archive-card';
       const heading = document.createElement('h3');
