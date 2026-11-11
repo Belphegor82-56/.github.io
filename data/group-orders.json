@@ -3,7 +3,7 @@
     {
       "id": "0591bc8a-9fe8-4743-ae32-b2f5d669158d",
       "image": "images/uploads/1794273353638-75bb8a48551fa3f4.jpg",
-      "received": false,
+      "received": true,
       "queued": true,
       "paid": false,
       "shippable": false,
