@@ -1058,19 +1058,19 @@
     },
     {
       "id": "excel-通贩-64",
-      "image": "",
+      "image": "images/uploads/1794364118067-828bff24073e50f9.jpg",
+      "received": false,
       "work": "ダンガンロンパシリーズ",
       "version": "野崎つばたさんイラスト 真宮寺是清 飼育係ver. BIGアクリルスタンド",
-      "quantity": "1",
-      "price": "1980",
+      "quantity": 1,
+      "price": 1980,
       "currency": "JPY",
       "kind": "立牌",
       "platform": "colleize",
+      "payment": "クレジットカード",
       "shipping": "配送",
       "orderDate": "2026-10-09",
-      "shipDate": "2027-01-30",
-      "payment": "クレジットカード",
-      "received": false
+      "shipDate": "2027-01-30"
     },
     {
       "id": "excel-通贩-65",
