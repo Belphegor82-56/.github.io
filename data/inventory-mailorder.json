@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "0f6f9d7a-bb5c-4c9b-899d-b379f855d522",
+      "image": "images/uploads/1794363640010-f0106b30e7e8b6d7.jpg",
+      "received": false,
+      "work": "PICCODO BODY10",
+      "version": "クリームホワイト",
+      "quantity": 1,
+      "price": 2750,
+      "currency": "JPY",
+      "kind": "素体",
+      "platform": "piccodo",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-11",
+      "shipDate": ""
+    },
+    {
       "id": "bb50e0a4-f461-4f2c-8593-99c3f7ffa59b",
       "image": "images/uploads/1794363585337-2fb27ff3868a271a.jpg",
       "received": false,
