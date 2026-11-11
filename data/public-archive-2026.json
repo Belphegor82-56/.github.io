@@ -33,6 +33,16 @@
         "images/uploads/1794375741370-75c96e0660d5ee15.webp"
       ],
       "category": "diary"
+    },
+    {
+      "id": "trip-1794376898685-i0726xhz",
+      "createdAt": "2026-11-11T06:01:38.685Z",
+      "updatedAt": "2026-11-11T06:01:38.685Z",
+      "title": "",
+      "description": "",
+      "html": "",
+      "images": [],
+      "category": "travel"
     }
   ]
 }
