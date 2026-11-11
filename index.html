@@ -866,18 +866,20 @@
           if (window.annsCloud?.isAdmin() !== true) return;
           if (!confirm('确定从 ' + year + ' 年旅行日记中删除「' + (record.title || '未命名旅行') + '」吗？此操作会同步保存到 GitHub。')) return;
           deleteBtn.disabled = true;
+          const previous = archiveRecords;
+          const next = previous.filter(item => item.id !== record.id);
+          // 立即更新页面，后台提交失败时恢复原记录。
+          archiveRecords = next;
+          renderArchive(year);
           try {
-            const next = archiveRecords.filter(item => item.id !== record.id);
             await publishArchiveToCloud(year, next);
-            archiveRecords = next;
             if (editingArchiveId === record.id) closeArchiveEditor();
-            renderArchive(year);
             showArchiveSaveMessage('已从 GitHub 删除这篇旅行记录。');
           } catch (error) {
+            archiveRecords = previous;
+            renderArchive(year);
             console.error('删除旅行记录失败：', error);
-            alert('删除失败：' + error.message);
-          } finally {
-            deleteBtn.disabled = false;
+            alert('删除失败，记录已恢复：' + error.message);
           }
         });
         actions.append(editBtn, deleteBtn);
@@ -1565,7 +1567,18 @@ function renderInventory(category) {
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'dream-btn'; remove.textContent = '删除';
     remove.addEventListener('click',async () => {
       if (!inventoryAdmin() || !confirm('确定删除「'+(record.work || '此记录')+'」吗？')) return;
-      if (await saveInventory(category,readInventory(category).filter(item => item.id !== record.id))) { inventoryForm.hidden = true; renderInventory(category); }
+      const next = readInventory(category).filter(item => item.id !== record.id);
+      // 乐观更新：立即隐藏这一行；保存失败则恢复。
+      tr.hidden = true;
+      remove.disabled = true;
+      const saved = await saveInventory(category,next);
+      if (saved) {
+        inventoryForm.hidden = true;
+        renderInventory(category);
+      } else {
+        tr.hidden = false;
+        remove.disabled = false;
+      }
     });
     const actionStack = document.createElement('div'); actionStack.className = 'inventory-action-stack';
     actionStack.append(edit,remove); actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
