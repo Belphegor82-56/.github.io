@@ -50,6 +50,9 @@
 .archive-current-images p {margin:0 0 8px;font-size:13px;color:#666;}
 #archive-current-images-list {display:flex;flex-wrap:wrap;gap:8px;}
 #archive-current-images-list img {width:88px;height:72px;object-fit:cover;border-radius:6px;}
+#archive-current-images-list .archive-photo-item {position:relative;width:88px;min-height:72px;}
+#archive-current-images-list .archive-photo-remove {position:absolute;right:3px;top:3px;border:0;border-radius:50%;background:#a52828;color:white;width:25px;height:25px;cursor:pointer;font-size:17px;line-height:1;}
+#archive-current-images-list .archive-photo-remove:focus-visible {outline:3px solid #2563eb;outline-offset:2px;}
     #archive-editor {
   margin-top: 25px;
   padding: 25px;
@@ -653,6 +656,7 @@
   const archiveStoragePrefix = 'anns-website-archive-records-v1-';
   let archiveRecords = [];
   let editingArchiveId = null;
+  let archiveRetainedImages = [];
   let activeArchiveYear = null;
   let archiveLoadSequence = 0;
   const archiveImagesInput = document.getElementById('archive-images');
@@ -692,6 +696,7 @@
   function closeArchiveEditor() {
     archiveEditor.hidden = true;
     editingArchiveId = null;
+    archiveRetainedImages = [];
     savedRange = null;
     archiveImagesInput.value = '';
     inlineImageInput.value = '';
@@ -707,20 +712,36 @@
     archiveTitleInput.value = record ? (record.title || '') : '';
     richEditor.innerHTML = record ? (record.html || escapeArchiveHtml(record.body || record.description || '').replace(/\n/g, '<br>')) : '';
     archiveImagesInput.value = '';
-    archiveCurrentImagesList.replaceChildren();
-    const existingImages = record && Array.isArray(record.images) ? record.images : [];
-    archiveCurrentImages.hidden = existingImages.length === 0;
-    existingImages.forEach(src => {
-      const image = document.createElement('img');
-      image.src = src;
-      image.alt = '已保存的旅行照片';
-      image.loading = 'lazy';
-      archiveCurrentImagesList.appendChild(image);
-    });
+    archiveRetainedImages = record && Array.isArray(record.images) ? [...record.images] : [];
+    renderArchiveEditorImages();
     savedRange = null;
     archiveEditor.hidden = false;
     archiveEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
     archiveTitleInput.focus();
+  }
+  function renderArchiveEditorImages() {
+    archiveCurrentImagesList.replaceChildren();
+    archiveCurrentImages.hidden = archiveRetainedImages.length === 0;
+    archiveRetainedImages.forEach((src,index) => {
+      const item = document.createElement('div');
+      item.className = 'archive-photo-item';
+      const image = document.createElement('img');
+      image.src = src;
+      image.alt = '旅行照片 ' + (index + 1);
+      image.loading = 'lazy';
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'archive-photo-remove';
+      remove.textContent = '×';
+      remove.title = '移除第 ' + (index + 1) + ' 张图片';
+      remove.setAttribute('aria-label',remove.title);
+      remove.addEventListener('click', () => {
+        archiveRetainedImages.splice(index,1);
+        renderArchiveEditorImages();
+      });
+      item.append(image,remove);
+      archiveCurrentImagesList.appendChild(item);
+    });
   }
   function escapeArchiveHtml(value) {
     const node = document.createElement('div');
@@ -1164,7 +1185,7 @@ archiveSaveBtn.addEventListener('click', async () => {
       title: archiveTitleInput.value.trim(),
       description: richEditor.innerText,
       html: richEditor.innerHTML,
-      images: [...(old && Array.isArray(old.images) ? old.images : []), ...previewPaths]
+      images: [...archiveRetainedImages, ...previewPaths]
     };
     delete record.body;
     const next = old ? archiveRecords.map(item => item.id === old.id ? record : item) : [...archiveRecords, record];
@@ -1180,7 +1201,7 @@ archiveSaveBtn.addEventListener('click', async () => {
         img.setAttribute('src', await readFileAsDataURL(new File([await response.blob()], 'photo.jpg')));
       }
     }
-    const durableRecord = {...record, images:[...(old && Array.isArray(old.images) ? old.images : []),...durableImages],html:durableWrapper.innerHTML};
+    const durableRecord = {...record, images:[...archiveRetainedImages,...durableImages],html:durableWrapper.innerHTML};
     const durableNext = old ? archiveRecords.map(item => item.id === old.id ? durableRecord : item) : [...archiveRecords, durableRecord];
     await annsDraftStore.put('archive:'+year, {entries:durableNext,savedAt:Date.now()});
     archiveRecords = durableNext;
