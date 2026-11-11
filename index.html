@@ -1460,7 +1460,7 @@ inventoryForm.addEventListener('submit', async event => {
   }
   const records = readInventory(category);
   const previousRecord = records.find(item => item.id === inventoryEditingId);
-  const record = { id: inventoryEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+'-'+Math.random()), image: inventoryImageData, received: previousRecord ? Boolean(previousRecord.received) : false };
+  const record = { id: inventoryEditingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+'-'+Math.random()), image: inventoryImageData || (previousRecord ? (previousRecord.image || '') : ''), received: previousRecord ? Boolean(previousRecord.received) : false };
   inventoryFields.forEach(field => { record[field] = inventoryForm.elements.namedItem(field).value.trim(); });
   record.quantity = quantity;
   record.price = priceText === '' ? '' : Number(priceText);
