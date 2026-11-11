@@ -72,9 +72,9 @@
       "description": "",
       "status": "未收到",
       "amount": "",
-      "currency": "JPY",
-      "targetPrice": "",
-      "targetCurrency": "JPY",
+      "currency": "CNY",
+      "targetPrice": "300-400",
+      "targetCurrency": "CNY",
       "image": "images/uploads/1793845714681-d5c0c0750399de2d.jpg"
     },
     {
