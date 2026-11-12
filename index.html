@@ -727,7 +727,7 @@
   let archiveRecords = [];
   let editingArchiveId = null;
   let editingArchiveCategory = "travel";
-  const archiveOpenCategories = {travel:true,diary:false};
+  const archiveOpenCategories = {travel:false,diary:false};
   let archiveRetainedImages = [];
   let activeArchiveYear = null;
   let archiveLoadSequence = 0;
@@ -1163,6 +1163,8 @@
     }
   }
   async function loadArchive(year = '2026') {
+    archiveOpenCategories.travel = false;
+    archiveOpenCategories.diary = false;
     activeArchiveYear = year;
     closeArchiveEditor();
     const sequence = ++archiveLoadSequence;
