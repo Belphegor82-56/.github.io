@@ -52,11 +52,13 @@
   @media (max-width:700px) {.archive-category-grid {grid-template-columns:minmax(0,1fr);}}
    .archive-card.archive-card-wide {grid-column:span 2;width:var(--archive-card-width,100%);justify-self:start;}
   .archive-card.archive-card-narrow {width:var(--archive-card-width,100%);justify-self:start;}
-  .archive-resize-handle {position:absolute;right:8px;top:8px;bottom:auto;width:24px;height:24px;border:0;background:rgba(236,231,224,.9);border-radius:6px;cursor:ew-resize;touch-action:none;display:grid;place-items:center;color:#555;opacity:0;z-index:2;font-size:18px;line-height:1;user-select:none;}
+  .archive-resize-handle {position:absolute;right:8px;top:8px;bottom:auto;width:24px;height:24px;border:0;background:rgba(236,231,224,.9);border-radius:6px;cursor:nwse-resize;touch-action:none;display:grid;place-items:center;color:#555;opacity:0;z-index:2;font-size:18px;line-height:1;user-select:none;}
   .archive-card {position:relative;}
+  .archive-card.archive-card-sized {overflow-y:auto;overscroll-behavior:contain;}
+  .archive-card.archive-card-sized .archive-resize-handle {position:sticky;float:right;top:0;margin:-10px -10px 0 0;}
   .archive-card:hover .archive-resize-handle,.archive-card:focus-within .archive-resize-handle {opacity:1;}
   @media (hover:none) {.archive-resize-handle {opacity:1;}}
-  @media (max-width:700px) {.archive-card.archive-card-wide,.archive-card.archive-card-narrow {grid-column:span 1;width:100%;}.archive-resize-handle {display:none;}}
+  @media (max-width:700px) {.archive-card.archive-card-wide,.archive-card.archive-card-narrow {grid-column:span 1;width:100%;}.archive-card.archive-card-sized {height:auto!important;overflow-y:visible;}.archive-resize-handle {display:none;}}
   .archive-card-header {display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
   .archive-card-header h3 {margin-top:0;min-width:0;flex:1;}
   #archive-content #add-archive-btn {display:block;margin:12px auto 18px 0;}
@@ -928,6 +930,11 @@
         card.classList.add('archive-card-narrow');
         card.style.setProperty('--archive-card-width',savedWidth * 2 + '%');
       }
+      const savedHeight = Number(record.cardHeight);
+      if (Number.isFinite(savedHeight) && savedHeight >= 180) {
+        card.classList.add('archive-card-sized');
+        card.style.height = Math.min(1200,savedHeight) + 'px';
+      }
       const heading = document.createElement('h3');
       heading.textContent = record.title || '未命名旅行';
       const header = document.createElement('div');
@@ -1088,8 +1095,8 @@
         handle.type = 'button';
         handle.className = 'archive-resize-handle';
         handle.textContent = '↘';
-        handle.title = '拖动调整 Card 宽度';
-        handle.setAttribute('aria-label','拖动调整 Card 宽度');
+        handle.title = '拖动调整 Card 宽度和高度';
+        handle.setAttribute('aria-label','拖动调整 Card 宽度和高度');
         handle.addEventListener('pointerdown', event => {
           if (event.button !== 0 || window.innerWidth <= 700) return;
           event.preventDefault();
@@ -1098,11 +1105,17 @@
           const rect = grid.getBoundingClientRect();
           const startWidth = Math.max(25,Math.min(100,Number(record.cardWidth) || 50));
           const startX = event.clientX;
+          const startY = event.clientY;
+          const startHeight = card.getBoundingClientRect().height;
           let currentWidth = startWidth;
+          let currentHeight = Math.round(startHeight);
           handle.setPointerCapture(event.pointerId);
           const move = e => {
             const nextWidth = Math.max(25,Math.min(100,startWidth + (e.clientX - startX) / rect.width * 100));
             currentWidth = Math.round(nextWidth);
+            currentHeight = Math.round(Math.max(180,Math.min(1200,startHeight + e.clientY - startY)));
+            card.classList.add('archive-card-sized');
+            card.style.height = currentHeight + 'px';
             card.classList.toggle('archive-card-wide',currentWidth > 50);
             card.classList.toggle('archive-card-narrow',currentWidth < 50);
             if (currentWidth > 50) card.style.setProperty('--archive-card-width',currentWidth + '%');
@@ -1112,21 +1125,22 @@
           handle.addEventListener('pointermove',move);
           handle.addEventListener('pointerup',async () => {
             handle.removeEventListener('pointermove',move);
-            if (currentWidth === startWidth) return;
+            if (currentWidth === startWidth && Math.abs(currentHeight - startHeight) < 2) return;
             handle.disabled = true;
             const oldRecords = archiveRecords;
-            const nextRecords = archiveRecords.map(item => item.id === record.id ? {...item,cardWidth:currentWidth} : item);
+            const nextRecords = archiveRecords.map(item => item.id === record.id ? {...item,cardWidth:currentWidth,cardHeight:currentHeight} : item);
             try {
               await annsDraftStore.put('archive:'+year,{entries:nextRecords,savedAt:Date.now()});
               archiveRecords = nextRecords;
               const published = await publishArchiveToCloud(year,nextRecords);
               archiveRecords = published.map(normalizeArchive);
               record.cardWidth = currentWidth;
+              record.cardHeight = currentHeight;
               await annsDraftStore.remove('archive:'+year);
-              showArchiveSaveMessage('Card 宽度已保存到 GitHub。');
+              showArchiveSaveMessage('Card 宽度和高度已保存到 GitHub。');
             } catch(error) {
               console.error('保存 Card 宽度失败',error);
-              alert('Card 宽度尚未成功同步，请稍后重试：' + error.message);
+              alert('Card 大小尚未成功同步，请稍后重试：' + error.message);
             } finally {
               handle.disabled = false;
             }
