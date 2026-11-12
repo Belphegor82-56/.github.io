@@ -6,6 +6,8 @@
   <title>Ann's Website</title>
   <style>
     * { box-sizing: border-box; }
+    #wandering-archive-nav {display:none;}
+    body.archive-admin #wandering-archive-nav {display:block;}
     body { margin: 15px; font-family: Optima, 仿宋, sans-serif; background: #ffffff; color: #333; }
     .layout { display: flex; min-height: 100vh; }
     .sidebar { width: 245px; flex-shrink: 0; padding: 30px 22px; border-right: 1px solid #e4dfd8; }
@@ -509,7 +511,7 @@
           
           </div>
         </details>
-        <details>
+        <details id="wandering-archive-nav">
           <summary>The Wandering Archive</summary>
           <div class="subcategories">
             <a href="#2026" data-category="2026">2026</a>
@@ -686,7 +688,8 @@
     const inventoryCategories = ['卡带', '通贩', '中古'];
     const archiveYears = ['2026', '2025', '2024', '2023', '2022'];
     function updatePage() {
-      const category = decodeURIComponent(location.hash.slice(1));
+      const requestedCategory = decodeURIComponent(location.hash.slice(1));
+      const category = archiveYears.includes(requestedCategory) && window.annsCloud?.isAdmin() !== true ? '' : requestedCategory;
       const match = [...links].find(link => link.dataset.category === category);
       links.forEach(link => link.classList.toggle('active', link === match));
       if (match) match.closest('details').open = true;
@@ -2565,7 +2568,9 @@ function renderInventory(category) {
       request,
       isAdmin: () => authenticated
     };
+    document.body.classList.toggle('archive-admin', authenticated);
     window.dispatchEvent(new Event('anns-admin-ready'));
+    window.dispatchEvent(new Event('hashchange'));
   }
 
   initializeAdmin();
