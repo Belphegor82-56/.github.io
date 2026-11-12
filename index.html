@@ -52,10 +52,11 @@
   @media (max-width:700px) {.archive-category-grid {grid-template-columns:minmax(0,1fr);}}
    .archive-card.archive-card-wide {grid-column:span 2;width:var(--archive-card-width,100%);justify-self:start;}
   .archive-card.archive-card-narrow {width:var(--archive-card-width,100%);justify-self:start;}
-  .archive-resize-handle {position:absolute;right:8px;top:8px;bottom:auto;width:24px;height:24px;border:0;background:rgba(236,231,224,.9);border-radius:6px;cursor:nwse-resize;touch-action:none;display:grid;place-items:center;color:#555;opacity:0;z-index:2;font-size:18px;line-height:1;user-select:none;}
+  .archive-resize-handle {position:absolute;right:0;bottom:0;top:auto;width:24px;height:24px;padding:0;border:0;background:transparent;border-radius:0 0 10px 0;cursor:nwse-resize;touch-action:none;display:block;opacity:0;z-index:5;user-select:none;}
+  .archive-resize-handle::after {content:'';position:absolute;right:4px;bottom:4px;width:11px;height:11px;border-right:2px solid #8d8d8d;border-bottom:2px solid #8d8d8d;opacity:.85;}
+  .archive-resize-handle:hover::after {border-color:#416b51;}
   .archive-card {position:relative;}
   .archive-card.archive-card-sized {overflow-y:auto;overscroll-behavior:contain;}
-  .archive-card.archive-card-sized .archive-resize-handle {position:sticky;float:right;top:0;margin:-10px -10px 0 0;}
   .archive-card:hover .archive-resize-handle,.archive-card:focus-within .archive-resize-handle {opacity:1;}
   @media (hover:none) {.archive-resize-handle {opacity:1;}}
   @media (max-width:700px) {.archive-card.archive-card-wide,.archive-card.archive-card-narrow {grid-column:span 1;width:100%;}.archive-card.archive-card-sized {height:auto!important;overflow-y:visible;}.archive-resize-handle {display:none;}}
@@ -1094,7 +1095,8 @@
         const handle = document.createElement('button');
         handle.type = 'button';
         handle.className = 'archive-resize-handle';
-        handle.textContent = '↘';
+        handle.textContent = '';
+        handle.style.touchAction = 'none';
         handle.title = '拖动调整 Card 宽度和高度';
         handle.setAttribute('aria-label','拖动调整 Card 宽度和高度');
         handle.addEventListener('pointerdown', event => {
