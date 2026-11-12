@@ -251,6 +251,7 @@
     .inventory-received-cell { text-align: center; min-width: 64px; }
     .inventory-received-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5d866d; }
     .inventory-received-row { background: #f4f9f5; }
+    .inventory-received-checkbox:disabled {opacity:1;cursor:default;}
 
     /* Editorial homepage: white, Garamond, local clock, subtle fade */
     body { margin: 0; }
@@ -2015,7 +2016,7 @@ function renderInventory(category) {
     // Editing is temporarily disabled so visitors and admins cannot mistake
     // local-only changes for GitHub commits during the read-only rollout.
     const inventoryReadOnlyStyle = document.createElement('style');
-    inventoryReadOnlyStyle.textContent = 'body:not(.inventory-cloud-admin) #inventory-add,body:not(.inventory-cloud-admin) .inventory-actions,body:not(.inventory-cloud-admin) .inventory-received-checkbox{display:none!important}';
+    inventoryReadOnlyStyle.textContent = 'body:not(.inventory-cloud-admin) #inventory-add,body:not(.inventory-cloud-admin) .inventory-actions{display:none!important}';
     document.head.appendChild(inventoryReadOnlyStyle);
     inventoryForm.hidden = true;
     window.addEventListener('anns-admin-ready',refreshInventoryAccess);
