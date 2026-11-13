@@ -274,19 +274,19 @@
     },
     {
       "id": "excel-通贩-14",
-      "image": "",
+      "image": "images/uploads/1794533753259-335f9f8f9448d0e6.jpg",
+      "received": false,
       "work": "P30th",
       "version": "キャンバスボード（P3主人公）【@Loppi・HMV】",
-      "quantity": "1",
-      "price": "4400",
+      "quantity": 1,
+      "price": 4400,
       "currency": "JPY",
       "kind": "亚克力制品",
       "platform": "HMV books",
+      "payment": "クレジットカード",
       "shipping": "配送（杨主任家）",
       "orderDate": "2026-08-03",
-      "shipDate": "2026-11-12",
-      "payment": "クレジットカード",
-      "received": false
+      "shipDate": "2026-11-12"
     },
     {
       "id": "excel-通贩-15",
