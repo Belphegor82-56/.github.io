@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "79df6930-e305-4836-91da-daa5f9e84aec",
+      "image": "images/uploads/1794545225553-e5ce77dae297e754.jpg",
+      "received": false,
+      "work": "TVアニメ『家庭教師ヒットマンREBORN!』 めじるしアクセサリー標的2",
+      "version": "六道骸(10年後)",
+      "quantity": 2,
+      "price": 400,
+      "currency": "JPY",
+      "kind": "扭蛋挂件",
+      "platform": "https://parks2.bandainamco-am.co.jp/",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-13",
+      "shipDate": "2027年2月下旬頃"
+    },
+    {
       "id": "54627e2c-d751-4d9f-8a53-a2459f0ac5b0",
       "image": "images/uploads/1794545146100-7958dd2564d639d8.jpg",
       "received": false,
