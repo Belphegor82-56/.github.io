@@ -258,7 +258,7 @@
     },
     {
       "id": "excel-通贩-13",
-      "image": "",
+      "image": "images/uploads/1794534074042-43df432ebbcca92e.jpg",
       "received": false,
       "work": "ジョジョの奇妙な冒険7",
       "version": "ＡＵＲＥＸ　ＡＸ－ＲＰ１０　ＪＯＪＯ　ｍａｇａｚｉｎｅ　Ｅｄｉｔｉｏｎ",
@@ -306,19 +306,19 @@
     },
     {
       "id": "excel-通贩-16",
-      "image": "",
+      "image": "images/uploads/1794534075539-3d5e82c1e76eb30f.jpg",
+      "received": false,
       "work": "P30th",
       "version": "P30th アクリルスタンド（P3主人公）【ローソン・@Loppi・HMV限定】",
-      "quantity": "1",
-      "price": "1980",
+      "quantity": 1,
+      "price": 1980,
       "currency": "JPY",
       "kind": "亚克力制品",
       "platform": "HMV books",
+      "payment": "クレジットカード",
       "shipping": "配送（杨主任家）",
       "orderDate": "2026-08-03",
-      "shipDate": "2026-11-12",
-      "payment": "クレジットカード",
-      "received": false
+      "shipDate": "2026-11-12"
     },
     {
       "id": "excel-通贩-17",
