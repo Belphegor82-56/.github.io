@@ -1,20 +1,36 @@
 {
   "entries": [
     {
-      "id": "2cbf520c-62e8-498a-84d3-172e3ed5a117",
-      "image": "images/uploads/1794545368097-b06ad68311197320.jpg",
+      "id": "6aa86c3f-9fcc-4f92-8639-edff88c87ca6",
+      "image": "",
       "received": false,
-      "work": "TVアニメ『家庭教師ヒットマンREBORN!』 めじるしアクセサリー標的2",
-      "version": "フラン",
+      "work": "My Chemical Romance",
+      "version": "ストア限定】　Broken Beaten Damned XX Hoodie （S）",
       "quantity": 1,
-      "price": 400,
+      "price": 11100,
       "currency": "JPY",
-      "kind": "扭蛋挂件",
-      "platform": "https://parks2.bandainamco-am.co.jp/",
-      "payment": "PayPay",
+      "kind": "衣服",
+      "platform": "Warner music jp",
+      "payment": "クレジットカード",
       "shipping": "配送",
-      "orderDate": "2026-11-13",
-      "shipDate": "2027年2月下旬頃"
+      "orderDate": "2026-10-30",
+      "shipDate": "11月中旬以降"
+    },
+    {
+      "id": "df95aeb1-ec7e-421c-9819-840d726a0739",
+      "image": "images/uploads/1794545867362-5246f5fe66055f50.jpg",
+      "received": false,
+      "work": "My Chemical Romance",
+      "version": "【ストア限定】　The Black Parade (20th Anniversary Edition) [One-Step 180g 2LP ] 【輸入盤アナログ２枚組LP】",
+      "quantity": 1,
+      "price": 19000,
+      "currency": "JPY",
+      "kind": "LP",
+      "platform": "Warner music jp",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-10-30",
+      "shipDate": "11月中旬以降"
     },
     {
       "id": "75ce917f-3503-454e-a4ae-1e7646302097",
@@ -62,7 +78,7 @@
       "payment": "PayPay",
       "shipping": "配送",
       "orderDate": "2026-11-13",
-      "shipDate": "2027年2月下旬頃"
+      "shipDate": ""
     },
     {
       "id": "af04f33e-d545-4c9a-b30f-1d5e61786129",
