@@ -1,11 +1,27 @@
 {
   "entries": [
     {
+      "id": "00ae29a6-84e1-48fb-bac8-6ce49892fefc",
+      "image": "images/uploads/1794545993915-617a46f4062788d7.jpg",
+      "received": false,
+      "work": "TVアニメ『家庭教師ヒットマンREBORN!』 めじるしアクセサリー標的2",
+      "version": "フラン",
+      "quantity": 1,
+      "price": 400,
+      "currency": "JPY",
+      "kind": "扭蛋挂件",
+      "platform": "https://parks2.bandainamco-am.co.jp/",
+      "payment": "PayPay",
+      "shipping": "配送",
+      "orderDate": "2026-11-13",
+      "shipDate": "2027年2月下旬頃"
+    },
+    {
       "id": "6aa86c3f-9fcc-4f92-8639-edff88c87ca6",
-      "image": "",
+      "image": "images/uploads/1794545995456-6bd3e7b621709a38.jpg",
       "received": false,
       "work": "My Chemical Romance",
-      "version": "ストア限定】　Broken Beaten Damned XX Hoodie （S）",
+      "version": "【ストア限定】　Broken Beaten Damned XX Hoodie （S）",
       "quantity": 1,
       "price": 11100,
       "currency": "JPY",
