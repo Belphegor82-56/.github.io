@@ -290,19 +290,19 @@
     },
     {
       "id": "excel-通贩-15",
-      "image": "",
+      "image": "images/uploads/1794533811744-7f9339bca1e9668c.jpg",
+      "received": false,
       "work": "P30th",
       "version": "P30th アクリルスタンド（P5主人公）【ローソン・@Loppi・HMV限定】",
-      "quantity": "1",
-      "price": "1980",
+      "quantity": 1,
+      "price": 1980,
       "currency": "JPY",
       "kind": "亚克力制品",
       "platform": "HMV books",
+      "payment": "クレジットカード",
       "shipping": "配送（杨主任家）",
       "orderDate": "2026-08-03",
-      "shipDate": "2026-11-12",
-      "payment": "クレジットカード",
-      "received": false
+      "shipDate": "2026-11-12"
     },
     {
       "id": "excel-通贩-16",
