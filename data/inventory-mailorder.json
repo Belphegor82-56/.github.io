@@ -339,7 +339,7 @@
     {
       "id": "excel-通贩-12",
       "image": "images/uploads/1794363914580-a5d3850f819aaba9.jpg",
-      "received": false,
+      "received": true,
       "work": "ジョジョの奇妙な冒険7",
       "version": "Ｔｈｅ　Ａｎｉｍａｔｉｏｎ　ＳＰＥＣＩＡＬ　ＳＯＵＮＤＴＲＡＣＫ　ｓｅｌｅｃｔｅｄ　ｂｙ　ＪＯＪＯ　Ｍａｇａｚｉｎｅ　ＢＥ１",
       "quantity": 1,
@@ -403,7 +403,7 @@
     {
       "id": "excel-通贩-16",
       "image": "images/uploads/1794534075539-3d5e82c1e76eb30f.jpg",
-      "received": true,
+      "received": false,
       "work": "P30th",
       "version": "P30th アクリルスタンド（P3主人公）【ローソン・@Loppi・HMV限定】",
       "quantity": 1,
