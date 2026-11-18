@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "e174b033-5024-4151-935b-816fce281443",
+      "image": "images/uploads/1794980564691-9900b9f36aa2175e.jpg",
+      "received": false,
+      "work": "騙して救って教祖さま！",
+      "version": "C賞 アクリルスタンド《C》",
+      "quantity": 2,
+      "price": 700,
+      "currency": "JPY",
+      "kind": "立牌",
+      "platform": "ウェブポン",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-10-17",
+      "shipDate": ""
+    },
+    {
       "id": "b603c6cf-16dd-4fd8-bdc5-6f71ca2d409a",
       "image": "images/uploads/1794980411732-a417381a09ece26b.jpg",
       "received": false,
