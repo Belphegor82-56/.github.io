@@ -2006,27 +2006,6 @@ function renderInventory(category) {
     }
     const receivedCell = document.createElement('td');
     receivedCell.className = 'inventory-received-cell';
-    if (category === '通贩' && inventoryAuthorized()) {
-      const handle = document.createElement('span');
-      handle.textContent = '⠿';
-      handle.title = '按住拖动，调整这一行的位置';
-      handle.setAttribute('aria-label', '拖动排序');
-      handle.draggable = inventoryAdmin();
-      handle.style.cssText = 'display:inline-block;cursor:grab;margin-right:9px;font-size:20px;vertical-align:middle;user-select:none;touch-action:none;';
-      handle.addEventListener('dragstart', event => {
-        if (!inventoryAdmin()) { event.preventDefault(); return; }
-        inventoryDragId = record.id;
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', record.id);
-        handle.style.cursor = 'grabbing';
-      });
-      handle.addEventListener('dragend', () => {
-        inventoryDragId = null;
-        handle.style.cursor = 'grab';
-        inventoryBody.querySelectorAll('tr').forEach(row => { row.style.outline = ''; });
-      });
-      receivedCell.appendChild(handle);
-    }
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'inventory-received-checkbox';
@@ -2078,7 +2057,29 @@ function renderInventory(category) {
       renderInventory(category);
     });
     const actionStack = document.createElement('div'); actionStack.className = 'inventory-action-stack';
-    actionStack.append(edit,remove); actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
+    actionStack.append(edit,remove);
+    if (category === '通贩' && inventoryAuthorized()) {
+      const handle = document.createElement('span');
+      handle.textContent = '⠿';
+      handle.title = '按住拖动，调整这一行的位置';
+      handle.setAttribute('aria-label', '拖动排序');
+      handle.draggable = inventoryAdmin();
+      handle.style.cssText = 'display:inline-block;cursor:grab;margin-left:10px;font-size:20px;vertical-align:middle;user-select:none;touch-action:none;';
+      handle.addEventListener('dragstart', event => {
+        if (!inventoryAdmin()) { event.preventDefault(); return; }
+        inventoryDragId = record.id;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', record.id);
+        handle.style.cursor = 'grabbing';
+      });
+      handle.addEventListener('dragend', () => {
+        inventoryDragId = null;
+        handle.style.cursor = 'grab';
+        inventoryBody.querySelectorAll('tr').forEach(row => { row.style.outline = ''; });
+      });
+      actionStack.appendChild(handle);
+    }
+    actions.appendChild(actionStack); tr.appendChild(actions); inventoryBody.appendChild(tr);
   });
 }
 
