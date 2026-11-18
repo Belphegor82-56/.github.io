@@ -1802,12 +1802,32 @@ async function saveInventory(category, records) {
   try {
     // 保存前先检查云端版本，避免用旧页面覆盖其他页面刚保存的数据。
     const path = inventoryCloudPaths[category];
-    const checkResponse = await fetch(path + '?check=' + Date.now(), {cache:'no-store'});
-    if (!checkResponse.ok) throw new Error('无法读取最新云端数据，已取消保存以保护原有记录');
-    const latestPayload = await checkResponse.json();
-    if (!latestPayload || !Array.isArray(latestPayload.entries)) throw new Error('云端数据格式异常，已取消保存');
-    if (JSON.stringify(latestPayload.entries) !== JSON.stringify(cloudInventory[category])) {
-      throw new Error('云端数据已被其他页面更新。为避免覆盖新内容，请刷新网页后重新操作');
+    // GitHub Pages 部署与浏览器缓存可能滞后于刚刚提交的记录。
+    // 比较内容而不是 JSON 属性顺序，并对短暂不同步进行有限重试。
+    const canonical = value => {
+      if (Array.isArray(value)) return value.map(canonical);
+      if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+      }
+      return value;
+    };
+    const expected = JSON.stringify(canonical(cloudInventory[category]));
+    let latestPayload;
+    let matches = false;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const checkResponse = await fetch(path + '?check=' + Date.now() + '-' + attempt, {cache:'no-store'});
+      if (!checkResponse.ok) throw new Error('无法读取最新云端数据，已取消保存以保护原有记录');
+      latestPayload = await checkResponse.json();
+      if (!latestPayload || !Array.isArray(latestPayload.entries)) throw new Error('云端数据格式异常，已取消保存');
+      matches = JSON.stringify(canonical(latestPayload.entries)) === expected;
+      if (matches) break;
+      if (attempt < 3) {
+        showCloudSaveStatus('正在等待 GitHub Pages 同步最新记录…');
+        await new Promise(resolve => setTimeout(resolve, 900 * (attempt + 1)));
+      }
+    }
+    if (!matches) {
+      throw new Error('云端记录与当前页面不一致。为保护已有数据，请等待网站同步后刷新页面再保存');
     }
 
     const previousById = new Map(cloudInventory[category].map(record => [record.id,record]));
