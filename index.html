@@ -472,6 +472,35 @@
       margin: 0;
     }
 
+    /* 通贩：编辑/删除为左列，拖动手柄独占右列。 */
+    .inventory-table td.inventory-actions:has(.inventory-drag-handle) {
+      width: 95px;
+      min-width: 95px;
+      padding: 8px 5px;
+    }
+    .inventory-table .inventory-action-stack:has(.inventory-drag-handle) {
+      display: grid;
+      grid-template-columns: 49px 24px;
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-content: center;
+      column-gap: 8px;
+      row-gap: 5px;
+    }
+    .inventory-table .inventory-action-stack .inventory-drag-handle {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch;
+      cursor: grab;
+      font-size: 21px;
+      user-select: none;
+      touch-action: none;
+      margin: 0;
+    }
+
     /* 梦情编辑表单：金额与币种同行，心理价与币种同行 */
     #dream-form .dream-price-layout { display: flex; flex-direction: column; gap: 14px; }
     #dream-form .dream-price-row { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) max-content; align-items: end; gap: 12px; min-width: 0; }
@@ -2061,10 +2090,11 @@ function renderInventory(category) {
     if (category === '通贩' && inventoryAuthorized()) {
       const handle = document.createElement('span');
       handle.textContent = '⠿';
+      handle.className = 'inventory-drag-handle';
       handle.title = '按住拖动，调整这一行的位置';
       handle.setAttribute('aria-label', '拖动排序');
       handle.draggable = inventoryAdmin();
-      handle.style.cssText = 'display:inline-block;cursor:grab;margin-left:10px;font-size:20px;vertical-align:middle;user-select:none;touch-action:none;';
+
       handle.addEventListener('dragstart', event => {
         if (!inventoryAdmin()) { event.preventDefault(); return; }
         inventoryDragId = record.id;
