@@ -1950,6 +1950,33 @@ inventoryForm.addEventListener('submit', async event => {
   }
   renderInventory(category);
 });
+let inventoryDragId = null;
+async function reorderInventoryByDrag(category, draggedId, targetId) {
+  if (category !== '通贩' || !inventoryAdmin() || draggedId === targetId) return;
+  const current = readInventory(category);
+  const from = current.findIndex(item => item.id === draggedId);
+  const to = current.findIndex(item => item.id === targetId);
+  if (from < 0 || to < 0) return;
+  const next = current.map(item => ({...item}));
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  try {
+    await annsDraftStore.put('inventory:' + category, {entries:next, savedAt:Date.now(), reordered:true});
+  } catch(error) {
+    alert('无法保存排序草稿，已取消拖动：' + error.message);
+    return;
+  }
+  inventoryPreviewRecords[category] = next;
+  renderInventory(category);
+  const saved = await saveInventory(category, next);
+  if (saved) {
+    await annsDraftStore.put('inventory:' + category, {entries:next, savedAt:Date.now(), reordered:true, synced:true}).catch(console.error);
+    cloudInventory[category] = next;
+  } else {
+    showCloudSaveStatus('新顺序已保留在本地，云端同步尚未完成');
+  }
+  renderInventory(category);
+}
 function renderInventory(category) {
   inventoryBody.replaceChildren();
   const records = readInventory(category);
@@ -1961,8 +1988,45 @@ function renderInventory(category) {
   records.forEach(record => {
     const tr = document.createElement('tr');
     tr.classList.toggle('inventory-received-row', Boolean(record.received));
+    if (category === '通贩') {
+      tr.addEventListener('dragover', event => {
+        if (!inventoryDragId || !inventoryAdmin()) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        tr.style.outline = '2px dashed #999';
+      });
+      tr.addEventListener('dragleave', () => { tr.style.outline = ''; });
+      tr.addEventListener('drop', event => {
+        event.preventDefault();
+        tr.style.outline = '';
+        const dragged = inventoryDragId;
+        inventoryDragId = null;
+        reorderInventoryByDrag(category, dragged, record.id);
+      });
+    }
     const receivedCell = document.createElement('td');
     receivedCell.className = 'inventory-received-cell';
+    if (category === '通贩' && inventoryAuthorized()) {
+      const handle = document.createElement('span');
+      handle.textContent = '⠿';
+      handle.title = '按住拖动，调整这一行的位置';
+      handle.setAttribute('aria-label', '拖动排序');
+      handle.draggable = inventoryAdmin();
+      handle.style.cssText = 'display:inline-block;cursor:grab;margin-right:9px;font-size:20px;vertical-align:middle;user-select:none;touch-action:none;';
+      handle.addEventListener('dragstart', event => {
+        if (!inventoryAdmin()) { event.preventDefault(); return; }
+        inventoryDragId = record.id;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', record.id);
+        handle.style.cursor = 'grabbing';
+      });
+      handle.addEventListener('dragend', () => {
+        inventoryDragId = null;
+        handle.style.cursor = 'grab';
+        inventoryBody.querySelectorAll('tr').forEach(row => { row.style.outline = ''; });
+      });
+      receivedCell.appendChild(handle);
+    }
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'inventory-received-checkbox';
