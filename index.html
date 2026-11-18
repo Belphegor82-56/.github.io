@@ -1734,6 +1734,51 @@ const inventoryCloudPaths = {'卡带':'data/inventory-cards.json','通贩':'data
 function inventoryAuthorized() { return inventoryCloudReady && window.annsCloud?.isAdmin() === true; }
 function inventoryAdmin() { return inventoryAuthorized() && !inventorySaving; }
 function inventoryImageUrl(value) { return value instanceof Blob ? URL.createObjectURL(value) : (typeof value === 'string' && value.startsWith('images/uploads/') ? value : (value || '')); }
+// 压缩较大的商品图片，缩短上传等待时间。
+async function prepareInventoryImage(dataUrl) {
+  const original = await fetch(dataUrl).then(response => response.blob());
+  if (!/^image\/(jpeg|png|webp)$/i.test(original.type) || original.size < 900 * 1024) return original;
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(original);
+    const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const compressed = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
+    return compressed && compressed.size < original.size ? compressed : original;
+  } catch (error) {
+    console.warn('商品图片压缩不可用，使用原图上传', error);
+    return original;
+  } finally {
+    if (bitmap) bitmap.close();
+  }
+}
+async function uploadInventoryImages(prepared) {
+  const pending = prepared.filter(record => typeof record.image === 'string' && record.image.startsWith('data:image/'));
+  let cursor = 0;
+  const uploadedByDataUrl = new Map();
+  async function worker() {
+    while (cursor < pending.length) {
+      const record = pending[cursor++];
+      const originalDataUrl = record.image;
+      if (!uploadedByDataUrl.has(originalDataUrl)) {
+        const task = (async () => {
+          const blob = await prepareInventoryImage(originalDataUrl);
+          const result = await window.annsCloud.request('/upload', {
+            method: 'POST', headers: {'Content-Type': blob.type}, body: blob
+          });
+          if (!result.ok || !result.path) throw new Error('有图片未能成功上传；商品数据尚未提交');
+          return result.path;
+        })();
+        uploadedByDataUrl.set(originalDataUrl, task);
+      }
+      record.image = await uploadedByDataUrl.get(originalDataUrl);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(3, pending.length)}, () => worker()));
+}
 async function saveInventory(category, records) {
   if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
   if (!Array.isArray(records) || records.some(record => !record || typeof record.id !== 'string' || !record.id.trim())) {
@@ -1765,16 +1810,9 @@ async function saveInventory(category, records) {
       if ((!copy.image || copy.image === '') && previous && previous.image) copy.image = previous.image;
       return copy;
     });
-    for (const record of prepared) {
-      if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
-        const blob = await fetch(record.image).then(response => response.blob());
-        const result = await window.annsCloud.request('/upload',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
-        if (!result.ok || !result.path) throw new Error('有图片未能成功上传；商品数据尚未提交');
-        record.image = result.path;
-      }
-      if (typeof record.image === 'string' && record.image.startsWith('data:image/')) {
-        throw new Error('图片仍处于待上传状态，已取消保存');
-      }
+    await uploadInventoryImages(prepared);
+    if (prepared.some(record => typeof record.image === 'string' && record.image.startsWith('data:image/'))) {
+      throw new Error('图片仍处于待上传状态，已取消保存');
     }
     if (prepared.length !== records.length || new Set(prepared.map(record => record.id)).size !== prepared.length) {
       throw new Error('保存前复核失败：记录数量或唯一编号不一致');
