@@ -1,22 +1,6 @@
 {
   "entries": [
     {
-      "id": "ce0f664c-2a37-42fe-8549-0fb5c6503f90",
-      "image": "images/uploads/1794985484032-fbbb73e675b5e047.jpg",
-      "received": false,
-      "work": "騙して救って教祖さま！",
-      "version": "E賞 缶バッジ《E》",
-      "quantity": 1,
-      "price": 700,
-      "currency": "JPY",
-      "kind": "吧唧",
-      "platform": "ウェブポン",
-      "payment": "クレジットカード",
-      "shipping": "配送",
-      "orderDate": "2026-10-17",
-      "shipDate": ""
-    },
-    {
       "id": "d2a0fbe0-e6bd-48a1-9121-8407d2594090",
       "image": "images/uploads/1794985436632-4711e05eede96a03.jpg",
       "received": false,
@@ -30,6 +14,22 @@
       "payment": "クレジットカード",
       "shipping": "配送",
       "orderDate": "",
+      "shipDate": ""
+    },
+    {
+      "id": "ce0f664c-2a37-42fe-8549-0fb5c6503f90",
+      "image": "images/uploads/1794985484032-fbbb73e675b5e047.jpg",
+      "received": false,
+      "work": "騙して救って教祖さま！",
+      "version": "E賞 缶バッジ《E》",
+      "quantity": 1,
+      "price": 700,
+      "currency": "JPY",
+      "kind": "吧唧",
+      "platform": "ウェブポン",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-10-17",
       "shipDate": ""
     },
     {
