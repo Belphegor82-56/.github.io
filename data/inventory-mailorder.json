@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "bb120589-3630-4a8e-a436-9388c3517318",
+      "image": "images/uploads/1794981208166-3bc0cc3d8c1d2f22.jpg",
+      "received": false,
+      "work": "騙して救って教祖さま！",
+      "version": "D賞 アクリルキーホルダー《C》",
+      "quantity": 1,
+      "price": 700,
+      "currency": "JPY",
+      "kind": "挂件",
+      "platform": "ウェブポン",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-10-17",
+      "shipDate": ""
+    },
+    {
       "id": "8701ca00-4a07-4191-b881-71a50f69bee5",
       "image": "images/uploads/1794981074952-8812a2a0d7e2b6ef.jpg",
       "received": false,
@@ -25,8 +41,8 @@
       "quantity": 2,
       "price": 700,
       "currency": "JPY",
-      "kind": "",
-      "platform": "",
+      "kind": "吧唧",
+      "platform": "ウェブポン",
       "payment": "クレジットカード",
       "shipping": "配送",
       "orderDate": "2026-10-17",
