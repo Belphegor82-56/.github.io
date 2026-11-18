@@ -1766,11 +1766,19 @@ async function uploadInventoryImages(prepared) {
       if (!uploadedByDataUrl.has(originalDataUrl)) {
         const task = (async () => {
           const blob = await prepareInventoryImage(originalDataUrl);
-          const result = await window.annsCloud.request('/upload', {
-            method: 'POST', headers: {'Content-Type': blob.type}, body: blob
-          });
-          if (!result.ok || !result.path) throw new Error('有图片未能成功上传；商品数据尚未提交');
-          return result.path;
+          // GitHub Contents API 偶尔会在并行提交时返回 409；仅重试冲突请求。
+          for (let attempt = 0; attempt < 4; attempt++) {
+            try {
+              const result = await window.annsCloud.request('/upload', {
+                method: 'POST', headers: {'Content-Type': blob.type}, body: blob
+              });
+              if (!result.ok || !result.path) throw new Error('有图片未能成功上传；商品数据尚未提交');
+              return result.path;
+            } catch (error) {
+              if (!/GitHub 409|\\b409\\b|conflict/i.test(String(error?.message || error)) || attempt === 3) throw error;
+              await new Promise(resolve => setTimeout(resolve, 450 * (attempt + 1) * (attempt + 1)));
+            }
+          }
         })();
         uploadedByDataUrl.set(originalDataUrl, task);
       }
