@@ -22,7 +22,7 @@
       "image": "images/uploads/1794976633897-ef5c945d071fb9a3.jpg",
       "received": false,
       "queued": true,
-      "paid": false,
+      "paid": true,
       "shippable": false,
       "work": "ファントムバスターズ",
       "version": "JS生日 会长吧唧",
