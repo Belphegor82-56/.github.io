@@ -2386,8 +2386,62 @@ function renderInventory(category) {
     let groupOrderEditingId = null;
     let groupOrderImageData = '';
     let cloudGroupOrders = null;
+    const groupStatusKey = 'anns-group-status-v1';
+    let groupStatusTimer, groupStatusBusy = false;
+    function groupStatusQueue() {
+      try { return JSON.parse(localStorage.getItem(groupStatusKey) || '{}') || {}; } catch(e) { return {}; }
+    }
+    function groupStatusOverlay(records, queue = groupStatusQueue()) {
+      return records.map(item => {
+        const copy = {...item};
+        for (const field of ['received','queued','paid','shippable']) {
+          if (queue[item.id]?.[field]) copy[field] = queue[item.id][field].value;
+        }
+        return copy;
+      });
+    }
+    function scheduleGroupStatus(delay = 2500) {
+      clearTimeout(groupStatusTimer);
+      groupStatusTimer = setTimeout(syncGroupStatus,delay);
+    }
+    async function syncGroupStatus() {
+      if (!groupCloudAuthorized() || groupStatusBusy) return;
+      if (groupCloudSaving) { scheduleGroupStatus(3000); return; }
+      const snapshot = groupStatusQueue();
+      const pending = {};
+      for (const [id,fields] of Object.entries(snapshot)) {
+        if (!cloudGroupOrders.some(item => item.id === id)) continue;
+        for (const [field,entry] of Object.entries(fields)) {
+          if (!entry.synced) (pending[id] ||= {})[field] = entry;
+        }
+      }
+      if (!Object.keys(pending).length) return;
+      groupStatusBusy = true;
+      let success = false;
+      try {
+        success = await saveGroupOrders(groupStatusOverlay(cloudGroupOrders,pending),true);
+        if (success) {
+          const latest = groupStatusQueue();
+          for (const [id,fields] of Object.entries(pending)) {
+            for (const [field,entry] of Object.entries(fields)) {
+              if (latest[id]?.[field]?.token === entry.token) latest[id][field].synced = true;
+            }
+          }
+          localStorage.setItem(groupStatusKey,JSON.stringify(latest));
+          showCloudSaveStatus('群排状态已同步','success');
+        }
+      } catch(e) { console.error(e); }
+      finally {
+        groupStatusBusy = false;
+        refreshGroupCloudAccess();
+        if (!success) showCloudSaveStatus('群排状态已保存在本地，稍后自动重试');
+        scheduleGroupStatus(success ? 2500 : 15000);
+      }
+    }
+    window.addEventListener('online',()=>scheduleGroupStatus(500));
+    window.addEventListener('anns-admin-ready',()=>scheduleGroupStatus(1000));
     function readGroupOrders() {
-      if (cloudGroupOrders !== null) return cloudGroupOrders.map(item => ({...item}));
+      if (cloudGroupOrders !== null) return groupStatusOverlay(cloudGroupOrders);
       try {
         const saved = localStorage.getItem(groupOrderKey);
         const records = saved ? JSON.parse(saved) : [];
@@ -2409,10 +2463,10 @@ function renderInventory(category) {
       const submit = groupOrderForm.querySelector('button[type="submit"],input[type="submit"]');
       if (submit) submit.disabled = !authorized || groupCloudSaving;
       if (decodeURIComponent(location.hash.slice(1)) === '群排') {
-        groupOrderBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || groupCloudSaving);
+        groupOrderBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || (groupCloudSaving && !groupStatusBusy));
       }
     }
-    async function saveGroupOrders(records) {
+    async function saveGroupOrders(records, background = false) {
       if (!groupCloudAdmin()) { alert('请先登录管理员并等待群排云端数据加载完成'); return false; }
       groupCloudSaving = true;
       showCloudSaveStatus('正在保存云端…');
@@ -2438,7 +2492,7 @@ function renderInventory(category) {
       } catch(error) {
         showCloudSaveStatus('保存失败，请检查网络后重试', 'error');
         console.error('Group order cloud save failed:',error);
-        alert('群排云端保存失败：'+error.message);
+        if (!background) alert('群排云端保存失败：'+error.message);
         return false;
       } finally {
         groupCloudSaving = false;
@@ -2553,27 +2607,19 @@ function renderInventory(category) {
           input.disabled = !(cloudGroupOrders !== null && window.annsCloud?.isAdmin() === true);
           input.addEventListener('change', async () => {
             if (cloudGroupOrders === null || window.annsCloud?.isAdmin() !== true) { input.checked = !input.checked; return; }
-            const current = readGroupOrders();
-            const target = current.find(item => item.id === record.id);
-            if (!target) { input.checked = !input.checked; return; }
-            target[field] = input.checked;
-            input.disabled = true;
             try {
-              const result = await window.annsCloud.request('/publish-collection',{
-                method:'POST',headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({category:'群排',entries:current})
-              });
-              if (!result.ok) throw new Error('GitHub 保存失败');
-              cloudGroupOrders = current;
-              record[field] = input.checked;
-              if (field === 'received') tr.classList.toggle('inventory-received-row', input.checked);
+              const queue = groupStatusQueue();
+              (queue[record.id] ||= {})[field] = {value:input.checked,token:Date.now()+':'+Math.random(),synced:false};
+              localStorage.setItem(groupStatusKey,JSON.stringify(queue));
             } catch(error) {
               input.checked = !input.checked;
-              console.error('Group checkbox cloud save failed:',error);
-              alert('群排状态保存失败：'+error.message);
-            } finally {
-              input.disabled = window.annsCloud?.isAdmin() !== true;
+              alert('浏览器本地保存失败，请检查存储权限');
+              return;
             }
+            record[field] = input.checked;
+            if (field === 'received') tr.classList.toggle('inventory-received-row',input.checked);
+            showCloudSaveStatus('群排状态已保存本地，等待批量同步');
+            scheduleGroupStatus();
           });
           td.appendChild(input);
           return td;
@@ -2638,6 +2684,17 @@ function renderInventory(category) {
         const payload = await response.json();
         if (!payload || !Array.isArray(payload.entries)) throw new Error('Invalid group order JSON');
         cloudGroupOrders = payload.entries;
+        try {
+          const queue = groupStatusQueue();
+          for (const item of cloudGroupOrders) {
+            for (const field of ['received','queued','paid','shippable']) {
+              if (queue[item.id]?.[field]?.synced && Boolean(item[field]) === queue[item.id][field].value) delete queue[item.id][field];
+            }
+            if (queue[item.id] && !Object.keys(queue[item.id]).length) delete queue[item.id];
+          }
+          localStorage.setItem(groupStatusKey,JSON.stringify(queue));
+        } catch(e) { console.error(e); }
+        scheduleGroupStatus(1000);
         if (decodeURIComponent(location.hash.slice(1)) === '群排') renderGroupOrders();
         refreshGroupCloudAccess();
       } catch (error) {
