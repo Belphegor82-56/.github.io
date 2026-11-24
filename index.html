@@ -1816,7 +1816,52 @@ async function uploadInventoryImages(prepared) {
   }
   await Promise.all(Array.from({length: Math.min(3, pending.length)}, () => worker()));
 }
-async function saveInventory(category, records) {
+// 到货勾选：按商品 ID 持久化，仅同步修改的到货字段。
+const receivedQueueKey = 'anns-mailorder-received-v1';
+let receivedTimer, receivedBusy = false;
+function readReceivedQueue() {
+  try { return JSON.parse(localStorage.getItem(receivedQueueKey) || '{}') || {}; }
+  catch(error) { console.error(error); return {}; }
+}
+function overlayReceived(category, records) {
+  if (category !== '通贩') return records;
+  const queue = readReceivedQueue();
+  return records.map(item => Object.prototype.hasOwnProperty.call(queue,item.id) ? {...item,received:queue[item.id].value} : item);
+}
+function scheduleReceivedSync(delay = 2500) {
+  clearTimeout(receivedTimer);
+  receivedTimer = setTimeout(syncReceivedQueue,delay);
+}
+async function syncReceivedQueue() {
+  if (receivedBusy || !inventoryAuthorized()) return;
+  if (inventorySaving) { scheduleReceivedSync(3000); return; }
+  const queue = readReceivedQueue();
+  const base = cloudInventory['通贩'];
+  if (!Array.isArray(base) || !Object.keys(queue).length) return;
+  const pending = Object.keys(queue).filter(id => !queue[id].synced && base.some(item => item.id === id));
+  if (!pending.length) return;
+  receivedBusy = true;
+  try {
+    const next = base.map(item => pending.includes(item.id) ? {...item,received:queue[item.id].value} : {...item});
+    const saved = await saveInventory('通贩',next,true);
+    if (saved) {
+      const latest = readReceivedQueue();
+      for (const id of pending) {
+        if (latest[id] && latest[id].token === queue[id].token) latest[id].synced = true;
+      }
+      localStorage.setItem(receivedQueueKey,JSON.stringify(latest));
+      // 保留已同步的勾选，直到之后页面读取到相同的云端状态。
+      showCloudSaveStatus('到货状态已同步','success');
+    } else showCloudSaveStatus('到货状态已保存在本地，稍后重试');
+    scheduleReceivedSync(saved ? 2500 : 15000);
+  } catch(error) {
+    console.error(error);
+    scheduleReceivedSync(15000);
+  } finally { receivedBusy = false; }
+}
+window.addEventListener('online',()=>scheduleReceivedSync(500));
+window.addEventListener('anns-admin-ready',()=>scheduleReceivedSync(1000));
+async function saveInventory(category, records, background = false) {
   if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
   if (!Array.isArray(records) || records.some(record => !record || typeof record.id !== 'string' || !record.id.trim())) {
     alert('商品数据检查未通过：存在无效记录，尚未保存。'); return false;
@@ -1885,7 +1930,7 @@ async function saveInventory(category, records) {
   } catch(error) {
     showCloudSaveStatus('保存未完成', 'error');
     console.error('Cloud save failed:',error);
-    alert('保存已中止：' + error.message + '。原有云端商品数据未被本次操作覆盖，请刷新后再试。');
+    if (!background) alert('保存已中止：' + error.message + '。原有云端商品数据未被本次操作覆盖，请刷新后再试。');
     return false;
   } finally { inventorySaving = false; refreshInventoryAccess(); }
 }
@@ -1896,7 +1941,7 @@ function refreshInventoryAccess() {
   if (!authorized) inventoryForm.hidden = true;
   const submit = inventoryForm.querySelector('button[type="submit"],input[type="submit"]');
   if (submit) submit.disabled = !authorized || inventorySaving;
-  inventoryBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || inventorySaving);
+  inventoryBody.querySelectorAll('.inventory-received-checkbox').forEach(input => input.disabled = !authorized || (inventorySaving && !receivedBusy));
 }
 function openInventoryForm(record = null) {
   inventoryForm.reset();
@@ -2008,7 +2053,7 @@ async function reorderInventoryByDrag(category, draggedId, targetId) {
 }
 function renderInventory(category) {
   inventoryBody.replaceChildren();
-  const records = readInventory(category);
+  const records = overlayReceived(category, readInventory(category));
   if (!records.length) {
     const tr = document.createElement('tr'); const td = document.createElement('td');
     td.colSpan = 13; td.className = 'inventory-empty'; td.textContent = '暂无记录，点击上方「＋ 添加」开始收藏。';
@@ -2042,6 +2087,24 @@ function renderInventory(category) {
     checkbox.setAttribute('aria-label', '到货状态：' + (record.work || '未命名商品'));
     checkbox.title = checkbox.checked ? '已到货' : '未到货';
     checkbox.addEventListener('change', async () => {
+      if (category === '通贩') {
+        if (!inventoryAuthorized()) { checkbox.checked = !checkbox.checked; return; }
+        try {
+          const queue = readReceivedQueue();
+          queue[record.id] = {value:checkbox.checked,token:Date.now() + ':' + Math.random(),synced:false};
+          localStorage.setItem(receivedQueueKey,JSON.stringify(queue));
+        } catch(error) {
+          checkbox.checked = !checkbox.checked;
+          alert('浏览器本地保存失败，请检查存储权限。');
+          return;
+        }
+        record.received = checkbox.checked;
+        tr.classList.toggle('inventory-received-row',checkbox.checked);
+        checkbox.title = checkbox.checked ? '已到货' : '未到货';
+        showCloudSaveStatus('到货状态已保存本地，等待批量同步');
+        scheduleReceivedSync();
+        return;
+      }
       const records = readInventory(category);
       const target = records.find(item => item.id === record.id);
       if (!target) { checkbox.checked = !checkbox.checked; return; }
@@ -2158,6 +2221,15 @@ function renderInventory(category) {
         }
       }
       inventoryCloudReady = results.every(result => result.status === 'fulfilled');
+      try {
+        const queue = readReceivedQueue();
+        const base = cloudInventory['通贩'] || [];
+        for (const item of base) {
+          if (queue[item.id]?.synced && Boolean(item.received) === queue[item.id].value) delete queue[item.id];
+        }
+        localStorage.setItem(receivedQueueKey,JSON.stringify(queue));
+      } catch(error) { console.error(error); }
+      scheduleReceivedSync(1000);
       // 先恢复草稿，不让旧的 Pages 数据覆盖刷新前尚未同步的图片。
       for (const category of inventoryCategories) {
         try {
