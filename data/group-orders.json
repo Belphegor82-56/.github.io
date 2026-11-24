@@ -20,7 +20,7 @@
     {
       "id": "7ec189fa-9607-40ad-89f9-634af1fba034",
       "image": "images/uploads/1794976633897-ef5c945d071fb9a3.jpg",
-      "received": false,
+      "received": true,
       "queued": true,
       "paid": true,
       "shippable": false,
