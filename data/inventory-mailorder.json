@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "835d506f-dc94-4542-8031-db3f5cda0a9f",
+      "image": "images/uploads/1795758264231-086be8c24cd49197.jpg",
+      "received": false,
+      "work": "Arknights: Endfield",
+      "version": "Dango Plushie Charm - 2026 Black Friday",
+      "quantity": 1,
+      "price": 22,
+      "currency": "JPY",
+      "kind": "毛绒",
+      "platform": "",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-11-27",
+      "shipDate": ""
+    },
+    {
       "id": "a5edc352-c39d-4c24-a2db-6e72bc810d2c",
       "image": "images/uploads/1795758143638-b2f7b52eeabddaf4.jpg",
       "received": false,
