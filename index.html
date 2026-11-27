@@ -1832,16 +1832,25 @@ function scheduleReceivedSync(delay = 2500) {
   clearTimeout(receivedTimer);
   receivedTimer = setTimeout(syncReceivedQueue,delay);
 }
+async function readLiveCollection(path) {
+  const response = await fetch('https://api.github.com/repos/Belphegor82-56/.github.io/contents/'+path+'?ref=main&fresh='+Date.now(), {cache:'no-store',headers:{Accept:'application/vnd.github.raw+json'}});
+  if (!response.ok) throw new Error('无法读取 GitHub 最新记录: '+response.status);
+  const payload = await response.json();
+  if (!Array.isArray(payload.entries)) throw new Error('GitHub 数据格式异常');
+  return payload.entries;
+}
 async function syncReceivedQueue() {
   if (receivedBusy || !inventoryAuthorized()) return;
-  if (inventorySaving) { scheduleReceivedSync(3000); return; }
+  if (inventorySaving || !inventoryForm.hidden || Object.prototype.hasOwnProperty.call(inventoryPreviewRecords,'通贩')) { scheduleReceivedSync(3000); return; }
   const queue = readReceivedQueue();
-  const base = cloudInventory['通贩'];
+  let base = cloudInventory['通贩'];
   if (!Array.isArray(base) || !Object.keys(queue).length) return;
   const pending = Object.keys(queue).filter(id => !queue[id].synced && base.some(item => item.id === id));
   if (!pending.length) return;
   receivedBusy = true;
   try {
+    base = await readLiveCollection('data/inventory-mailorder.json');
+    cloudInventory['通贩'] = base;
     const next = base.map(item => pending.includes(item.id) ? {...item,received:queue[item.id].value} : {...item});
     const saved = await saveInventory('通贩',next,true);
     if (saved) {
@@ -1862,7 +1871,7 @@ async function syncReceivedQueue() {
 window.addEventListener('online',()=>scheduleReceivedSync(500));
 window.addEventListener('anns-admin-ready',()=>scheduleReceivedSync(1000));
 async function saveInventory(category, records, background = false) {
-  if (!inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
+  if ((!background && receivedBusy) || !inventoryAdmin() || !Object.prototype.hasOwnProperty.call(cloudInventory,category)) { alert('请先登录管理员，并等待云端数据加载完成。'); return false; }
   if (!Array.isArray(records) || records.some(record => !record || typeof record.id !== 'string' || !record.id.trim())) {
     alert('商品数据检查未通过：存在无效记录，尚未保存。'); return false;
   }
@@ -1889,9 +1898,7 @@ async function saveInventory(category, records, background = false) {
     let latestPayload;
     let matches = false;
     for (let attempt = 0; attempt < 4; attempt++) {
-      const checkResponse = await fetch(path + '?check=' + Date.now() + '-' + attempt, {cache:'no-store'});
-      if (!checkResponse.ok) throw new Error('无法读取最新云端数据，已取消保存以保护原有记录');
-      latestPayload = await checkResponse.json();
+      latestPayload = {entries:await readLiveCollection(path)};
       if (!latestPayload || !Array.isArray(latestPayload.entries)) throw new Error('云端数据格式异常，已取消保存');
       matches = JSON.stringify(canonical(latestPayload.entries)) === expected;
       if (matches) break;
@@ -1904,6 +1911,7 @@ async function saveInventory(category, records, background = false) {
       throw new Error('云端记录与当前页面不一致。为保护已有数据，请等待网站同步后刷新页面再保存');
     }
 
+    if (background && (records.length !== latestPayload.entries.length || latestPayload.entries.some(item => !ids.includes(item.id)))) throw new Error('后台同步不得增删商品');
     const previousById = new Map(cloudInventory[category].map(record => [record.id,record]));
     const prepared = records.map(record => {
       const copy = {...record};
@@ -2406,7 +2414,7 @@ function renderInventory(category) {
     }
     async function syncGroupStatus() {
       if (!groupCloudAuthorized() || groupStatusBusy) return;
-      if (groupCloudSaving) { scheduleGroupStatus(3000); return; }
+      if (groupCloudSaving || !groupOrderForm.hidden) { scheduleGroupStatus(3000); return; }
       const snapshot = groupStatusQueue();
       const pending = {};
       for (const [id,fields] of Object.entries(snapshot)) {
@@ -2419,6 +2427,7 @@ function renderInventory(category) {
       groupStatusBusy = true;
       let success = false;
       try {
+        cloudGroupOrders = await readLiveCollection('data/group-orders.json');
         success = await saveGroupOrders(groupStatusOverlay(cloudGroupOrders,pending),true);
         if (success) {
           const latest = groupStatusQueue();
@@ -2453,7 +2462,7 @@ function renderInventory(category) {
       return cloudGroupOrders !== null && window.annsCloud?.isAdmin() === true;
     }
     function groupCloudAdmin() {
-      return groupCloudAuthorized() && !groupCloudSaving;
+      return groupCloudAuthorized() && !groupCloudSaving && !groupStatusBusy;
     }
     function refreshGroupCloudAccess() {
       const authorized = groupCloudAuthorized();
@@ -2467,7 +2476,7 @@ function renderInventory(category) {
       }
     }
     async function saveGroupOrders(records, background = false) {
-      if (!groupCloudAdmin()) { alert('请先登录管理员并等待群排云端数据加载完成'); return false; }
+      if (!(background ? groupCloudAuthorized() && !groupCloudSaving : groupCloudAdmin())) { if (!background) alert('请先登录管理员并等待群排云端数据加载完成'); return false; }
       groupCloudSaving = true;
       showCloudSaveStatus('正在保存云端…');
       refreshGroupCloudAccess();
