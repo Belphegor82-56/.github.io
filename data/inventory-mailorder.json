@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "id": "a5edc352-c39d-4c24-a2db-6e72bc810d2c",
+      "image": "images/uploads/1795758143638-b2f7b52eeabddaf4.jpg",
+      "received": false,
+      "work": "Arknights: Endfield",
+      "version": "Winter Dango Plushie Charm - 2026 Black Friday Series",
+      "quantity": 1,
+      "price": 28,
+      "currency": "JPY",
+      "kind": "毛绒",
+      "platform": "Gryphline store",
+      "payment": "クレジットカード",
+      "shipping": "配送",
+      "orderDate": "2026-11-27",
+      "shipDate": ""
+    },
+    {
       "id": "907985fa-960e-4c2c-bdc6-82be9654eb8e",
       "image": "images/uploads/1795754159812-3c07dc6372a406bd.jpg",
       "received": false,
